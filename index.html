@@ -1,714 +1,1214 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz Hiragana & Katakana</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    :root {
-      --bg: #fef7f4;
-      --card: #ffffff;
-      --text: #1a1a1a;
-      --primary: #e63946;
-      --secondary: #f4a261;
-      --success: #06d6a0;
-      --error: #ef476f;
-      --border: #e5e5e5;
-      --shadow: rgba(0, 0, 0, 0.08);
-    }
-    
-    .dark {
-      --bg: #0f0f1e;
-      --card: #1a1a2e;
-      --text: #f0f0f0;
-      --primary: #ff6b6b;
-      --secondary: #ffd93d;
-      --success: #4ecdc4;
-      --error: #ff6b9d;
-      --border: #2a2a3e;
-      --shadow: rgba(0, 0, 0, 0.3);
-    }
-    
-    body {
-      font-family: 'Space Mono', monospace;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 20px;
-      transition: background 0.3s, color 0.3s;
-    }
-    
-    h1 {
-      text-align: center;
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-      font-family: 'Noto Sans JP', sans-serif;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    
-    #themeToggle {
-      display: block;
-      margin: 0 auto 30px;
-      padding: 12px 24px;
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 50px;
-      color: var(--text);
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-weight: 700;
-    }
-    
-    #themeToggle:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px var(--shadow);
-      border-color: var(--primary);
-    }
-    
-    .controls, .quiz {
-      background: var(--card);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 8px 24px var(--shadow);
-      border: 2px solid var(--border);
-    }
-    
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 700;
-      color: var(--text);
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    select, input[type="number"] {
-      width: 100%;
-      padding: 14px;
-      margin-bottom: 20px;
-      font-size: 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: inherit;
-      transition: all 0.3s;
-    }
-    
-    select:focus, input[type="number"]:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.1);
-    }
-    
-    .section-title {
-      font-size: 1.2rem;
-      margin: 25px 0 15px;
-      color: var(--primary);
-      font-family: 'Noto Sans JP', sans-serif;
-      border-left: 4px solid var(--primary);
-      padding-left: 12px;
-    }
-    
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    
-    .char-checkbox {
-      position: relative;
-    }
-    
-    .char-checkbox input[type="checkbox"] {
-      position: absolute;
-      opacity: 0;
-    }
-    
-    .char-checkbox label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px 8px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      text-align: center;
-      font-size: 24px;
-      font-family: 'Noto Sans JP', sans-serif;
-      cursor: pointer;
-      transition: all 0.3s;
-      background: var(--bg);
-      margin: 0;
-      text-transform: none;
-      letter-spacing: 0;
-    }
-    
-    .char-checkbox input:checked + label {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-      transform: scale(1.05);
-    }
-    
-    .char-checkbox label:hover {
-      border-color: var(--primary);
-      transform: translateY(-2px);
-    }
-    
-    button {
-      width: 100%;
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 700;
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: white;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.3s;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(230, 57, 70, 0.3);
-    }
-    
-    button:active {
-      transform: translateY(0);
-    }
-    
-    .quiz .char {
-      font-size: 120px;
-      text-align: center;
-      margin: 30px 0;
-      font-family: 'Noto Sans JP', sans-serif;
-      animation: fadeInScale 0.5s ease-out;
-    }
-    
-    @keyframes fadeInScale {
-      from {
-        opacity: 0;
-        transform: scale(0.8);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-    
-    .quiz input[type="text"] {
-      width: 100%;
-      padding: 18px;
-      margin-bottom: 20px;
-      font-size: 20px;
-      border: 3px solid var(--border);
-      border-radius: 12px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Space Mono', monospace;
-      text-align: center;
-      transition: all 0.3s;
-    }
-    
-    .quiz input[type="text"]:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
-    }
-    
-    .quiz input[type="text"]:disabled {
-      opacity: 0.8;
-      cursor: not-allowed;
-    }
-    
-    .stats {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 25px;
-      padding: 20px;
-      background: var(--bg);
-      border-radius: 12px;
-      border: 2px solid var(--border);
-    }
-    
-    .stat-item {
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: 700;
-    }
-    
-    .stat-item .emoji {
-      font-size: 2rem;
-      display: block;
-      margin-bottom: 5px;
-    }
-    
-    .stat-value {
-      display: block;
-      font-size: 2rem;
-      margin-top: 5px;
-    }
-    
-    .hidden {
-      display: none;
-    }
-    
-    .feedback {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0);
-      font-size: 5rem;
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 1000;
-    }
-    
-    .feedback.show {
-      transform: translate(-50%, -50%) scale(1);
-    }
-    
-    .progress {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--text);
-      opacity: 0.7;
-    }
-    
-    @media (max-width: 600px) {
-      h1 {
-        font-size: 2rem;
-      }
-      
-      .quiz .char {
-        font-size: 80px;
-      }
-      
-      .grid {
-        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>かな Quiz 🎌</h1>
-    <button id="themeToggle">🌙 Modo Escuro</button>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Quiz Hiragana & Katakana</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
 
-    <div class="controls" id="setup">
-      <label>Modo de estudo</label>
-      <select id="mode">
-        <option value="all">Hiragana + Katakana</option>
-        <option value="hira">Só Hiragana</option>
-        <option value="kata">Só Katakana</option>
-      </select>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-      <label>Repetições por caractere</label>
-      <input type="number" id="repeat" min="1" max="10" value="3" />
+            :root {
+                --bg: #fef7f4;
+                --card: #ffffff;
+                --text: #1a1a1a;
+                --primary: #e63946;
+                --secondary: #f4a261;
+                --success: #06d6a0;
+                --error: #ef476f;
+                --border: #e5e5e5;
+                --shadow: rgba(0, 0, 0, 0.08);
+            }
 
-      <div id="sections"></div>
+            .dark {
+                --bg: #0f0f1e;
+                --card: #1a1a2e;
+                --text: #f0f0f0;
+                --primary: #ff6b6b;
+                --secondary: #ffd93d;
+                --success: #4ecdc4;
+                --error: #ff6b9d;
+                --border: #2a2a3e;
+                --shadow: rgba(0, 0, 0, 0.3);
+            }
 
-      <button onclick="startQuiz()">Começar Quiz</button>
-    </div>
+            body {
+                font-family: 'Space Mono', monospace;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                padding: 20px;
+                transition:
+                    background 0.3s,
+                    color 0.3s;
+            }
 
-    <div class="quiz hidden" id="quiz">
-      <div class="progress" id="progress"></div>
-      <div class="char" id="currentChar"></div>
-      <input type="text" id="answer" placeholder="Digite o romaji" autocomplete="off" />
-      <button onclick="submitAnswer()">Confirmar</button>
+            h1 {
+                text-align: center;
+                font-size: 2.5rem;
+                margin-bottom: 20px;
+                font-family: 'Noto Sans JP', sans-serif;
+                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
 
-      <div class="stats">
-        <div class="stat-item">
-          <span class="emoji">✅</span>
-          <span class="stat-value" id="hits">0</span>
+            .theme-toggle {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 48px;
+                height: 48px;
+                padding: 12px;
+                background: var(--card);
+                border: 2px solid var(--border);
+                border-radius: 50%;
+                color: var(--text);
+                cursor: pointer;
+                transition: all 0.3s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px var(--shadow);
+                z-index: 100;
+            }
+
+            .theme-toggle:hover {
+                transform: translateY(-2px) rotate(15deg);
+                box-shadow: 0 6px 16px var(--shadow);
+                border-color: var(--primary);
+            }
+
+            .theme-toggle:active {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            .theme-toggle svg {
+                width: 24px;
+                height: 24px;
+                transition: all 0.3s;
+            }
+
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .controls,
+            .quiz {
+                background: var(--card);
+                padding: 30px;
+                border-radius: 20px;
+                box-shadow: 0 8px 24px var(--shadow);
+                border: 2px solid var(--border);
+            }
+
+            label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 700;
+                color: var(--text);
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            select,
+            input[type='number'] {
+                width: 100%;
+                padding: 14px;
+                margin-bottom: 20px;
+                font-size: 16px;
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                background: var(--bg);
+                color: var(--text);
+                font-family: inherit;
+                transition: all 0.3s;
+            }
+
+            select:focus,
+            input[type='number']:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.1);
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+                margin: 25px 0 15px;
+                color: var(--primary);
+                font-family: 'Noto Sans JP', sans-serif;
+                border-left: 4px solid var(--primary);
+                padding-left: 12px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .section-controls {
+                display: flex;
+                gap: 8px;
+            }
+
+            .section-controls button {
+                padding: 6px 12px;
+                font-size: 0.75rem;
+                width: auto;
+                background: var(--bg);
+                color: var(--text);
+                border: 2px solid var(--border);
+            }
+
+            .section-controls button:hover {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+            }
+
+            .romaji-display {
+                font-size: 80px;
+                text-align: center;
+                margin: 30px 0;
+                font-family: 'Space Mono', monospace;
+                font-weight: 700;
+                color: var(--primary);
+                animation: fadeInScale 0.5s ease-out;
+            }
+
+            .char-options {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                max-width: 400px;
+                margin: 0 auto 30px;
+            }
+
+            .char-option {
+                padding: 30px 20px;
+                border: 3px solid var(--border);
+                border-radius: 16px;
+                text-align: center;
+                font-size: 48px;
+                font-family: 'Noto Sans JP', sans-serif;
+                cursor: pointer;
+                transition: all 0.3s;
+                background: var(--bg);
+            }
+
+            .char-option:hover {
+                transform: translateY(-4px);
+                border-color: var(--primary);
+                box-shadow: 0 8px 20px var(--shadow);
+            }
+
+            .char-option.correct {
+                background: var(--success);
+                color: white;
+                border-color: var(--success);
+                animation: correctPulse 0.5s ease-out;
+            }
+
+            .char-option.wrong {
+                background: var(--error);
+                color: white;
+                border-color: var(--error);
+                animation: shake 0.5s ease-out;
+            }
+
+            .char-option.disabled {
+                pointer-events: none;
+                opacity: 0.5;
+            }
+
+            @keyframes correctPulse {
+                0%,
+                100% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.1);
+                }
+            }
+
+            @keyframes shake {
+                0%,
+                100% {
+                    transform: translateX(0);
+                }
+                25% {
+                    transform: translateX(-10px);
+                }
+                75% {
+                    transform: translateX(10px);
+                }
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .char-checkbox {
+                position: relative;
+            }
+
+            .char-checkbox input[type='checkbox'] {
+                position: absolute;
+                opacity: 0;
+            }
+
+            .char-checkbox label {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 16px 8px;
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                text-align: center;
+                font-size: 24px;
+                font-family: 'Noto Sans JP', sans-serif;
+                cursor: pointer;
+                transition: all 0.3s;
+                background: var(--bg);
+                margin: 0;
+                text-transform: none;
+                letter-spacing: 0;
+            }
+
+            .char-checkbox input:checked + label {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+                transform: scale(1.05);
+            }
+
+            .char-checkbox label:hover {
+                border-color: var(--primary);
+                transform: translateY(-2px);
+            }
+
+            button {
+                width: 100%;
+                padding: 16px;
+                font-size: 18px;
+                font-weight: 700;
+                border: none;
+                border-radius: 12px;
+                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                color: white;
+                cursor: pointer;
+                font-family: inherit;
+                transition: all 0.3s;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(230, 57, 70, 0.3);
+            }
+
+            button:active {
+                transform: translateY(0);
+            }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            button:disabled:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .quiz .char {
+                font-size: 120px;
+                text-align: center;
+                margin: 30px 0;
+                font-family: 'Noto Sans JP', sans-serif;
+                animation: fadeInScale 0.5s ease-out;
+            }
+
+            @keyframes fadeInScale {
+                from {
+                    opacity: 0;
+                    transform: scale(0.8);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
+            .quiz input[type='text'] {
+                width: 100%;
+                padding: 18px;
+                margin-bottom: 20px;
+                font-size: 20px;
+                border: 3px solid var(--border);
+                border-radius: 12px;
+                background: var(--bg);
+                color: var(--text);
+                font-family: 'Space Mono', monospace;
+                text-align: center;
+                transition: all 0.3s;
+            }
+
+            .quiz input[type='text']:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+            }
+
+            .quiz input[type='text']:disabled {
+                opacity: 0.8;
+                cursor: not-allowed;
+            }
+
+            .stats {
+                display: flex;
+                justify-content: space-around;
+                margin-top: 25px;
+                padding: 20px;
+                background: var(--bg);
+                border-radius: 12px;
+                border: 2px solid var(--border);
+            }
+
+            .stat-item {
+                text-align: center;
+                font-size: 1.2rem;
+                font-weight: 700;
+            }
+
+            .stat-item .emoji {
+                font-size: 2rem;
+                display: block;
+                margin-bottom: 5px;
+            }
+
+            .stat-value {
+                display: block;
+                font-size: 2rem;
+                margin-top: 5px;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            .feedback {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0);
+                font-size: 5rem;
+                transition: all 0.3s;
+                pointer-events: none;
+                z-index: 1000;
+            }
+
+            .feedback.show {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            .progress {
+                margin-top: 20px;
+                text-align: center;
+                font-size: 0.9rem;
+                color: var(--text);
+                opacity: 0.7;
+            }
+
+            .timer {
+                text-align: center;
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--primary);
+                margin-bottom: 20px;
+                font-family: 'Space Mono', monospace;
+            }
+
+            .combo-chars {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 10px;
+                font-size: 80px;
+                text-align: center;
+                margin: 30px 0;
+                font-family: 'Noto Sans JP', sans-serif;
+                animation: fadeInScale 0.5s ease-out;
+            }
+
+            #comboAnswer {
+                width: 100%;
+                padding: 18px;
+                margin-bottom: 20px;
+                font-size: 20px;
+                border: 3px solid var(--border);
+                border-radius: 12px;
+                background: var(--bg);
+                color: var(--text);
+                font-family: 'Space Mono', monospace;
+                text-align: center;
+                transition: all 0.3s;
+            }
+
+            #comboAnswer:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+            }
+
+            #comboAnswer:disabled {
+                opacity: 0.8;
+                cursor: not-allowed;
+            }
+
+            @media (max-width: 600px) {
+                h1 {
+                    font-size: 2rem;
+                }
+
+                .quiz .char {
+                    font-size: 80px;
+                }
+
+                .grid {
+                    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>かな Quiz 🎌</h1>
+
+            <button id="themeToggle" class="theme-toggle" aria-label="Alternar tema">
+                <svg
+                    id="moonIcon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                >
+                    <path
+                        d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"
+                    ></path>
+                </svg>
+                <svg
+                    id="sunIcon"
+                    class="hidden"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="currentColor"
+                    viewBox="0 0 256 256"
+                >
+                    <path
+                        d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"
+                    ></path>
+                </svg>
+            </button>
+
+            <div class="controls" id="setup">
+                <label>Modo de estudo</label>
+                <select id="mode">
+                    <option value="all">Hiragana + Katakana</option>
+                    <option value="hira">Só Hiragana</option>
+                    <option value="kata">Só Katakana</option>
+                </select>
+
+                <label>Tipo de quiz</label>
+                <select id="quizType">
+                    <option value="normal">Normal (Ver caractere → Digitar romaji)</option>
+                    <option value="reverse">Reverso (Ver romaji → Clicar caractere)</option>
+                    <option value="combo">Combo (Ver 3 caracteres → Digitar romaji junto)</option>
+                </select>
+
+                <label>Repetições por caractere</label>
+                <input type="number" id="repeat" min="1" max="10" value="3" />
+
+                <div id="sections"></div>
+
+                <button onclick="startQuiz()">Começar Quiz</button>
+            </div>
+
+            <div class="quiz hidden" id="quiz">
+                <div class="progress" id="progress"></div>
+                <div class="timer" id="timer">⏱️ 00:00</div>
+
+                <!-- Modo Normal -->
+                <div id="normalMode">
+                    <div class="char" id="currentChar"></div>
+                    <input type="text" id="answer" placeholder="Digite o romaji" autocomplete="off" />
+                    <button onclick="submitAnswer()">Confirmar</button>
+                </div>
+
+                <!-- Modo Reverso -->
+                <div id="reverseMode" class="hidden">
+                    <div class="romaji-display" id="romajiDisplay"></div>
+                    <div class="char-options" id="charOptions"></div>
+                </div>
+
+                <!-- Modo Combo -->
+                <div id="comboMode" class="hidden">
+                    <div class="combo-chars" id="comboChars"></div>
+                    <input
+                        type="text"
+                        id="comboAnswer"
+                        placeholder="Digite o romaji dos caracteres"
+                        autocomplete="off"
+                    />
+                    <button onclick="submitComboAnswer()">Confirmar</button>
+                </div>
+            </div>
         </div>
-        <div class="stat-item">
-          <span class="emoji">❌</span>
-          <span class="stat-value" id="miss">0</span>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="feedback" id="feedback"></div>
+        <div class="feedback" id="feedback"></div>
 
-  <script>
-    const allChars = [
-      // Hiragana básico
-      { char: 'あ', romaji: 'a', type: 'hira', group: 'basic' },
-      { char: 'い', romaji: 'i', type: 'hira', group: 'basic' },
-      { char: 'う', romaji: 'u', type: 'hira', group: 'basic' },
-      { char: 'え', romaji: 'e', type: 'hira', group: 'basic' },
-      { char: 'お', romaji: 'o', type: 'hira', group: 'basic' },
-      { char: 'か', romaji: 'ka', type: 'hira', group: 'basic' },
-      { char: 'き', romaji: 'ki', type: 'hira', group: 'basic' },
-      { char: 'く', romaji: 'ku', type: 'hira', group: 'basic' },
-      { char: 'け', romaji: 'ke', type: 'hira', group: 'basic' },
-      { char: 'こ', romaji: 'ko', type: 'hira', group: 'basic' },
-      { char: 'さ', romaji: 'sa', type: 'hira', group: 'basic' },
-      { char: 'し', romaji: 'shi', type: 'hira', group: 'basic' },
-      { char: 'す', romaji: 'su', type: 'hira', group: 'basic' },
-      { char: 'せ', romaji: 'se', type: 'hira', group: 'basic' },
-      { char: 'そ', romaji: 'so', type: 'hira', group: 'basic' },
-      { char: 'た', romaji: 'ta', type: 'hira', group: 'basic' },
-      { char: 'ち', romaji: 'chi', type: 'hira', group: 'basic' },
-      { char: 'つ', romaji: 'tsu', type: 'hira', group: 'basic' },
-      { char: 'て', romaji: 'te', type: 'hira', group: 'basic' },
-      { char: 'と', romaji: 'to', type: 'hira', group: 'basic' },
-      { char: 'な', romaji: 'na', type: 'hira', group: 'basic' },
-      { char: 'に', romaji: 'ni', type: 'hira', group: 'basic' },
-      { char: 'ぬ', romaji: 'nu', type: 'hira', group: 'basic' },
-      { char: 'ね', romaji: 'ne', type: 'hira', group: 'basic' },
-      { char: 'の', romaji: 'no', type: 'hira', group: 'basic' },
-      { char: 'は', romaji: 'ha', type: 'hira', group: 'basic' },
-      { char: 'ひ', romaji: 'hi', type: 'hira', group: 'basic' },
-      { char: 'ふ', romaji: 'fu', type: 'hira', group: 'basic' },
-      { char: 'へ', romaji: 'he', type: 'hira', group: 'basic' },
-      { char: 'ほ', romaji: 'ho', type: 'hira', group: 'basic' },
-      { char: 'ま', romaji: 'ma', type: 'hira', group: 'basic' },
-      { char: 'み', romaji: 'mi', type: 'hira', group: 'basic' },
-      { char: 'む', romaji: 'mu', type: 'hira', group: 'basic' },
-      { char: 'め', romaji: 'me', type: 'hira', group: 'basic' },
-      { char: 'も', romaji: 'mo', type: 'hira', group: 'basic' },
-      { char: 'や', romaji: 'ya', type: 'hira', group: 'basic' },
-      { char: 'ゆ', romaji: 'yu', type: 'hira', group: 'basic' },
-      { char: 'よ', romaji: 'yo', type: 'hira', group: 'basic' },
-      { char: 'ら', romaji: 'ra', type: 'hira', group: 'basic' },
-      { char: 'り', romaji: 'ri', type: 'hira', group: 'basic' },
-      { char: 'る', romaji: 'ru', type: 'hira', group: 'basic' },
-      { char: 'れ', romaji: 're', type: 'hira', group: 'basic' },
-      { char: 'ろ', romaji: 'ro', type: 'hira', group: 'basic' },
-      { char: 'わ', romaji: 'wa', type: 'hira', group: 'basic' },
-      { char: 'を', romaji: 'wo', type: 'hira', group: 'basic' },
-      { char: 'ん', romaji: 'n', type: 'hira', group: 'basic' },
-      
-      // Hiragana Dakuten
-      { char: 'が', romaji: 'ga', type: 'hira', group: 'dakuten' },
-      { char: 'ぎ', romaji: 'gi', type: 'hira', group: 'dakuten' },
-      { char: 'ぐ', romaji: 'gu', type: 'hira', group: 'dakuten' },
-      { char: 'げ', romaji: 'ge', type: 'hira', group: 'dakuten' },
-      { char: 'ご', romaji: 'go', type: 'hira', group: 'dakuten' },
-      { char: 'ざ', romaji: 'za', type: 'hira', group: 'dakuten' },
-      { char: 'じ', romaji: 'ji', type: 'hira', group: 'dakuten' },
-      { char: 'ず', romaji: 'zu', type: 'hira', group: 'dakuten' },
-      { char: 'ぜ', romaji: 'ze', type: 'hira', group: 'dakuten' },
-      { char: 'ぞ', romaji: 'zo', type: 'hira', group: 'dakuten' },
-      { char: 'だ', romaji: 'da', type: 'hira', group: 'dakuten' },
-      { char: 'ぢ', romaji: 'ji', type: 'hira', group: 'dakuten' },
-      { char: 'づ', romaji: 'zu', type: 'hira', group: 'dakuten' },
-      { char: 'で', romaji: 'de', type: 'hira', group: 'dakuten' },
-      { char: 'ど', romaji: 'do', type: 'hira', group: 'dakuten' },
-      { char: 'ば', romaji: 'ba', type: 'hira', group: 'dakuten' },
-      { char: 'び', romaji: 'bi', type: 'hira', group: 'dakuten' },
-      { char: 'ぶ', romaji: 'bu', type: 'hira', group: 'dakuten' },
-      { char: 'べ', romaji: 'be', type: 'hira', group: 'dakuten' },
-      { char: 'ぼ', romaji: 'bo', type: 'hira', group: 'dakuten' },
-      
-      // Hiragana Handakuten
-      { char: 'ぱ', romaji: 'pa', type: 'hira', group: 'handakuten' },
-      { char: 'ぴ', romaji: 'pi', type: 'hira', group: 'handakuten' },
-      { char: 'ぷ', romaji: 'pu', type: 'hira', group: 'handakuten' },
-      { char: 'ぺ', romaji: 'pe', type: 'hira', group: 'handakuten' },
-      { char: 'ぽ', romaji: 'po', type: 'hira', group: 'handakuten' },
-      
-      // Katakana básico
-      { char: 'ア', romaji: 'a', type: 'kata', group: 'basic' },
-      { char: 'イ', romaji: 'i', type: 'kata', group: 'basic' },
-      { char: 'ウ', romaji: 'u', type: 'kata', group: 'basic' },
-      { char: 'エ', romaji: 'e', type: 'kata', group: 'basic' },
-      { char: 'オ', romaji: 'o', type: 'kata', group: 'basic' },
-      { char: 'カ', romaji: 'ka', type: 'kata', group: 'basic' },
-      { char: 'キ', romaji: 'ki', type: 'kata', group: 'basic' },
-      { char: 'ク', romaji: 'ku', type: 'kata', group: 'basic' },
-      { char: 'ケ', romaji: 'ke', type: 'kata', group: 'basic' },
-      { char: 'コ', romaji: 'ko', type: 'kata', group: 'basic' },
-      { char: 'サ', romaji: 'sa', type: 'kata', group: 'basic' },
-      { char: 'シ', romaji: 'shi', type: 'kata', group: 'basic' },
-      { char: 'ス', romaji: 'su', type: 'kata', group: 'basic' },
-      { char: 'セ', romaji: 'se', type: 'kata', group: 'basic' },
-      { char: 'ソ', romaji: 'so', type: 'kata', group: 'basic' },
-      { char: 'タ', romaji: 'ta', type: 'kata', group: 'basic' },
-      { char: 'チ', romaji: 'chi', type: 'kata', group: 'basic' },
-      { char: 'ツ', romaji: 'tsu', type: 'kata', group: 'basic' },
-      { char: 'テ', romaji: 'te', type: 'kata', group: 'basic' },
-      { char: 'ト', romaji: 'to', type: 'kata', group: 'basic' },
-      { char: 'ナ', romaji: 'na', type: 'kata', group: 'basic' },
-      { char: 'ニ', romaji: 'ni', type: 'kata', group: 'basic' },
-      { char: 'ヌ', romaji: 'nu', type: 'kata', group: 'basic' },
-      { char: 'ネ', romaji: 'ne', type: 'kata', group: 'basic' },
-      { char: 'ノ', romaji: 'no', type: 'kata', group: 'basic' },
-      { char: 'ハ', romaji: 'ha', type: 'kata', group: 'basic' },
-      { char: 'ヒ', romaji: 'hi', type: 'kata', group: 'basic' },
-      { char: 'フ', romaji: 'fu', type: 'kata', group: 'basic' },
-      { char: 'ヘ', romaji: 'he', type: 'kata', group: 'basic' },
-      { char: 'ホ', romaji: 'ho', type: 'kata', group: 'basic' },
-      { char: 'マ', romaji: 'ma', type: 'kata', group: 'basic' },
-      { char: 'ミ', romaji: 'mi', type: 'kata', group: 'basic' },
-      { char: 'ム', romaji: 'mu', type: 'kata', group: 'basic' },
-      { char: 'メ', romaji: 'me', type: 'kata', group: 'basic' },
-      { char: 'モ', romaji: 'mo', type: 'kata', group: 'basic' },
-      { char: 'ヤ', romaji: 'ya', type: 'kata', group: 'basic' },
-      { char: 'ユ', romaji: 'yu', type: 'kata', group: 'basic' },
-      { char: 'ヨ', romaji: 'yo', type: 'kata', group: 'basic' },
-      { char: 'ラ', romaji: 'ra', type: 'kata', group: 'basic' },
-      { char: 'リ', romaji: 'ri', type: 'kata', group: 'basic' },
-      { char: 'ル', romaji: 'ru', type: 'kata', group: 'basic' },
-      { char: 'レ', romaji: 're', type: 'kata', group: 'basic' },
-      { char: 'ロ', romaji: 'ro', type: 'kata', group: 'basic' },
-      { char: 'ワ', romaji: 'wa', type: 'kata', group: 'basic' },
-      { char: 'ヲ', romaji: 'wo', type: 'kata', group: 'basic' },
-      { char: 'ン', romaji: 'n', type: 'kata', group: 'basic' },
-      
-      // Katakana Dakuten
-      { char: 'ガ', romaji: 'ga', type: 'kata', group: 'dakuten' },
-      { char: 'ギ', romaji: 'gi', type: 'kata', group: 'dakuten' },
-      { char: 'グ', romaji: 'gu', type: 'kata', group: 'dakuten' },
-      { char: 'ゲ', romaji: 'ge', type: 'kata', group: 'dakuten' },
-      { char: 'ゴ', romaji: 'go', type: 'kata', group: 'dakuten' },
-      { char: 'ザ', romaji: 'za', type: 'kata', group: 'dakuten' },
-      { char: 'ジ', romaji: 'ji', type: 'kata', group: 'dakuten' },
-      { char: 'ズ', romaji: 'zu', type: 'kata', group: 'dakuten' },
-      { char: 'ゼ', romaji: 'ze', type: 'kata', group: 'dakuten' },
-      { char: 'ゾ', romaji: 'zo', type: 'kata', group: 'dakuten' },
-      { char: 'ダ', romaji: 'da', type: 'kata', group: 'dakuten' },
-      { char: 'ヂ', romaji: 'ji', type: 'kata', group: 'dakuten' },
-      { char: 'ヅ', romaji: 'zu', type: 'kata', group: 'dakuten' },
-      { char: 'デ', romaji: 'de', type: 'kata', group: 'dakuten' },
-      { char: 'ド', romaji: 'do', type: 'kata', group: 'dakuten' },
-      { char: 'バ', romaji: 'ba', type: 'kata', group: 'dakuten' },
-      { char: 'ビ', romaji: 'bi', type: 'kata', group: 'dakuten' },
-      { char: 'ブ', romaji: 'bu', type: 'kata', group: 'dakuten' },
-      { char: 'ベ', romaji: 'be', type: 'kata', group: 'dakuten' },
-      { char: 'ボ', romaji: 'bo', type: 'kata', group: 'dakuten' },
-      
-      // Katakana Handakuten
-      { char: 'パ', romaji: 'pa', type: 'kata', group: 'handakuten' },
-      { char: 'ピ', romaji: 'pi', type: 'kata', group: 'handakuten' },
-      { char: 'プ', romaji: 'pu', type: 'kata', group: 'handakuten' },
-      { char: 'ペ', romaji: 'pe', type: 'kata', group: 'handakuten' },
-      { char: 'ポ', romaji: 'po', type: 'kata', group: 'handakuten' }
-    ];
+        <script>
+            const allChars = [
+                // Hiragana básico
+                { char: 'あ', romaji: 'a', type: 'hira', group: 'basic' },
+                { char: 'い', romaji: 'i', type: 'hira', group: 'basic' },
+                { char: 'う', romaji: 'u', type: 'hira', group: 'basic' },
+                { char: 'え', romaji: 'e', type: 'hira', group: 'basic' },
+                { char: 'お', romaji: 'o', type: 'hira', group: 'basic' },
+                { char: 'か', romaji: 'ka', type: 'hira', group: 'basic' },
+                { char: 'き', romaji: 'ki', type: 'hira', group: 'basic' },
+                { char: 'く', romaji: 'ku', type: 'hira', group: 'basic' },
+                { char: 'け', romaji: 'ke', type: 'hira', group: 'basic' },
+                { char: 'こ', romaji: 'ko', type: 'hira', group: 'basic' },
+                { char: 'さ', romaji: 'sa', type: 'hira', group: 'basic' },
+                { char: 'し', romaji: 'shi', type: 'hira', group: 'basic' },
+                { char: 'す', romaji: 'su', type: 'hira', group: 'basic' },
+                { char: 'せ', romaji: 'se', type: 'hira', group: 'basic' },
+                { char: 'そ', romaji: 'so', type: 'hira', group: 'basic' },
+                { char: 'た', romaji: 'ta', type: 'hira', group: 'basic' },
+                { char: 'ち', romaji: 'chi', type: 'hira', group: 'basic' },
+                { char: 'つ', romaji: 'tsu', type: 'hira', group: 'basic' },
+                { char: 'て', romaji: 'te', type: 'hira', group: 'basic' },
+                { char: 'と', romaji: 'to', type: 'hira', group: 'basic' },
+                { char: 'な', romaji: 'na', type: 'hira', group: 'basic' },
+                { char: 'に', romaji: 'ni', type: 'hira', group: 'basic' },
+                { char: 'ぬ', romaji: 'nu', type: 'hira', group: 'basic' },
+                { char: 'ね', romaji: 'ne', type: 'hira', group: 'basic' },
+                { char: 'の', romaji: 'no', type: 'hira', group: 'basic' },
+                { char: 'は', romaji: 'ha', type: 'hira', group: 'basic' },
+                { char: 'ひ', romaji: 'hi', type: 'hira', group: 'basic' },
+                { char: 'ふ', romaji: 'fu', type: 'hira', group: 'basic' },
+                { char: 'へ', romaji: 'he', type: 'hira', group: 'basic' },
+                { char: 'ほ', romaji: 'ho', type: 'hira', group: 'basic' },
+                { char: 'ま', romaji: 'ma', type: 'hira', group: 'basic' },
+                { char: 'み', romaji: 'mi', type: 'hira', group: 'basic' },
+                { char: 'む', romaji: 'mu', type: 'hira', group: 'basic' },
+                { char: 'め', romaji: 'me', type: 'hira', group: 'basic' },
+                { char: 'も', romaji: 'mo', type: 'hira', group: 'basic' },
+                { char: 'や', romaji: 'ya', type: 'hira', group: 'basic' },
+                { char: 'ゆ', romaji: 'yu', type: 'hira', group: 'basic' },
+                { char: 'よ', romaji: 'yo', type: 'hira', group: 'basic' },
+                { char: 'ら', romaji: 'ra', type: 'hira', group: 'basic' },
+                { char: 'り', romaji: 'ri', type: 'hira', group: 'basic' },
+                { char: 'る', romaji: 'ru', type: 'hira', group: 'basic' },
+                { char: 'れ', romaji: 're', type: 'hira', group: 'basic' },
+                { char: 'ろ', romaji: 'ro', type: 'hira', group: 'basic' },
+                { char: 'わ', romaji: 'wa', type: 'hira', group: 'basic' },
+                { char: 'を', romaji: 'wo', type: 'hira', group: 'basic' },
+                { char: 'ん', romaji: 'n', type: 'hira', group: 'basic' },
 
-    // Estado
-    const savedStats = JSON.parse(localStorage.getItem('kanaStats') || '{"hits":0,"miss":0,"perKana":{}}');
-    let hits = savedStats.hits || 0;
-    let miss = savedStats.miss || 0;
-    let perKana = savedStats.perKana || {};
-    let quizList = [];
-    let currentIndex = 0;
+                // Hiragana Dakuten
+                { char: 'が', romaji: 'ga', type: 'hira', group: 'dakuten' },
+                { char: 'ぎ', romaji: 'gi', type: 'hira', group: 'dakuten' },
+                { char: 'ぐ', romaji: 'gu', type: 'hira', group: 'dakuten' },
+                { char: 'げ', romaji: 'ge', type: 'hira', group: 'dakuten' },
+                { char: 'ご', romaji: 'go', type: 'hira', group: 'dakuten' },
+                { char: 'ざ', romaji: 'za', type: 'hira', group: 'dakuten' },
+                { char: 'じ', romaji: 'ji', type: 'hira', group: 'dakuten' },
+                { char: 'ず', romaji: 'zu', type: 'hira', group: 'dakuten' },
+                { char: 'ぜ', romaji: 'ze', type: 'hira', group: 'dakuten' },
+                { char: 'ぞ', romaji: 'zo', type: 'hira', group: 'dakuten' },
+                { char: 'だ', romaji: 'da', type: 'hira', group: 'dakuten' },
+                { char: 'ぢ', romaji: 'ji', type: 'hira', group: 'dakuten' },
+                { char: 'づ', romaji: 'zu', type: 'hira', group: 'dakuten' },
+                { char: 'で', romaji: 'de', type: 'hira', group: 'dakuten' },
+                { char: 'ど', romaji: 'do', type: 'hira', group: 'dakuten' },
+                { char: 'ば', romaji: 'ba', type: 'hira', group: 'dakuten' },
+                { char: 'び', romaji: 'bi', type: 'hira', group: 'dakuten' },
+                { char: 'ぶ', romaji: 'bu', type: 'hira', group: 'dakuten' },
+                { char: 'べ', romaji: 'be', type: 'hira', group: 'dakuten' },
+                { char: 'ぼ', romaji: 'bo', type: 'hira', group: 'dakuten' },
 
-    // Atualizar display de estatísticas
-    document.getElementById('hits').textContent = hits;
-    document.getElementById('miss').textContent = miss;
+                // Hiragana Handakuten
+                { char: 'ぱ', romaji: 'pa', type: 'hira', group: 'handakuten' },
+                { char: 'ぴ', romaji: 'pi', type: 'hira', group: 'handakuten' },
+                { char: 'ぷ', romaji: 'pu', type: 'hira', group: 'handakuten' },
+                { char: 'ぺ', romaji: 'pe', type: 'hira', group: 'handakuten' },
+                { char: 'ぽ', romaji: 'po', type: 'hira', group: 'handakuten' },
 
-    // Theme toggle
-    const themeToggle = document.getElementById('themeToggle');
-    const savedTheme = localStorage.getItem('theme');
-    
-    if (savedTheme === 'dark') {
-      document.body.classList.add('dark');
-      themeToggle.textContent = '☀️ Modo Claro';
-    }
+                // Katakana básico
+                { char: 'ア', romaji: 'a', type: 'kata', group: 'basic' },
+                { char: 'イ', romaji: 'i', type: 'kata', group: 'basic' },
+                { char: 'ウ', romaji: 'u', type: 'kata', group: 'basic' },
+                { char: 'エ', romaji: 'e', type: 'kata', group: 'basic' },
+                { char: 'オ', romaji: 'o', type: 'kata', group: 'basic' },
+                { char: 'カ', romaji: 'ka', type: 'kata', group: 'basic' },
+                { char: 'キ', romaji: 'ki', type: 'kata', group: 'basic' },
+                { char: 'ク', romaji: 'ku', type: 'kata', group: 'basic' },
+                { char: 'ケ', romaji: 'ke', type: 'kata', group: 'basic' },
+                { char: 'コ', romaji: 'ko', type: 'kata', group: 'basic' },
+                { char: 'サ', romaji: 'sa', type: 'kata', group: 'basic' },
+                { char: 'シ', romaji: 'shi', type: 'kata', group: 'basic' },
+                { char: 'ス', romaji: 'su', type: 'kata', group: 'basic' },
+                { char: 'セ', romaji: 'se', type: 'kata', group: 'basic' },
+                { char: 'ソ', romaji: 'so', type: 'kata', group: 'basic' },
+                { char: 'タ', romaji: 'ta', type: 'kata', group: 'basic' },
+                { char: 'チ', romaji: 'chi', type: 'kata', group: 'basic' },
+                { char: 'ツ', romaji: 'tsu', type: 'kata', group: 'basic' },
+                { char: 'テ', romaji: 'te', type: 'kata', group: 'basic' },
+                { char: 'ト', romaji: 'to', type: 'kata', group: 'basic' },
+                { char: 'ナ', romaji: 'na', type: 'kata', group: 'basic' },
+                { char: 'ニ', romaji: 'ni', type: 'kata', group: 'basic' },
+                { char: 'ヌ', romaji: 'nu', type: 'kata', group: 'basic' },
+                { char: 'ネ', romaji: 'ne', type: 'kata', group: 'basic' },
+                { char: 'ノ', romaji: 'no', type: 'kata', group: 'basic' },
+                { char: 'ハ', romaji: 'ha', type: 'kata', group: 'basic' },
+                { char: 'ヒ', romaji: 'hi', type: 'kata', group: 'basic' },
+                { char: 'フ', romaji: 'fu', type: 'kata', group: 'basic' },
+                { char: 'ヘ', romaji: 'he', type: 'kata', group: 'basic' },
+                { char: 'ホ', romaji: 'ho', type: 'kata', group: 'basic' },
+                { char: 'マ', romaji: 'ma', type: 'kata', group: 'basic' },
+                { char: 'ミ', romaji: 'mi', type: 'kata', group: 'basic' },
+                { char: 'ム', romaji: 'mu', type: 'kata', group: 'basic' },
+                { char: 'メ', romaji: 'me', type: 'kata', group: 'basic' },
+                { char: 'モ', romaji: 'mo', type: 'kata', group: 'basic' },
+                { char: 'ヤ', romaji: 'ya', type: 'kata', group: 'basic' },
+                { char: 'ユ', romaji: 'yu', type: 'kata', group: 'basic' },
+                { char: 'ヨ', romaji: 'yo', type: 'kata', group: 'basic' },
+                { char: 'ラ', romaji: 'ra', type: 'kata', group: 'basic' },
+                { char: 'リ', romaji: 'ri', type: 'kata', group: 'basic' },
+                { char: 'ル', romaji: 'ru', type: 'kata', group: 'basic' },
+                { char: 'レ', romaji: 're', type: 'kata', group: 'basic' },
+                { char: 'ロ', romaji: 'ro', type: 'kata', group: 'basic' },
+                { char: 'ワ', romaji: 'wa', type: 'kata', group: 'basic' },
+                { char: 'ヲ', romaji: 'wo', type: 'kata', group: 'basic' },
+                { char: 'ン', romaji: 'n', type: 'kata', group: 'basic' },
 
-    themeToggle.onclick = () => {
-      document.body.classList.toggle('dark');
-      const isDark = document.body.classList.contains('dark');
-      themeToggle.textContent = isDark ? '☀️ Modo Claro' : '🌙 Modo Escuro';
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    };
+                // Katakana Dakuten
+                { char: 'ガ', romaji: 'ga', type: 'kata', group: 'dakuten' },
+                { char: 'ギ', romaji: 'gi', type: 'kata', group: 'dakuten' },
+                { char: 'グ', romaji: 'gu', type: 'kata', group: 'dakuten' },
+                { char: 'ゲ', romaji: 'ge', type: 'kata', group: 'dakuten' },
+                { char: 'ゴ', romaji: 'go', type: 'kata', group: 'dakuten' },
+                { char: 'ザ', romaji: 'za', type: 'kata', group: 'dakuten' },
+                { char: 'ジ', romaji: 'ji', type: 'kata', group: 'dakuten' },
+                { char: 'ズ', romaji: 'zu', type: 'kata', group: 'dakuten' },
+                { char: 'ゼ', romaji: 'ze', type: 'kata', group: 'dakuten' },
+                { char: 'ゾ', romaji: 'zo', type: 'kata', group: 'dakuten' },
+                { char: 'ダ', romaji: 'da', type: 'kata', group: 'dakuten' },
+                { char: 'ヂ', romaji: 'ji', type: 'kata', group: 'dakuten' },
+                { char: 'ヅ', romaji: 'zu', type: 'kata', group: 'dakuten' },
+                { char: 'デ', romaji: 'de', type: 'kata', group: 'dakuten' },
+                { char: 'ド', romaji: 'do', type: 'kata', group: 'dakuten' },
+                { char: 'バ', romaji: 'ba', type: 'kata', group: 'dakuten' },
+                { char: 'ビ', romaji: 'bi', type: 'kata', group: 'dakuten' },
+                { char: 'ブ', romaji: 'bu', type: 'kata', group: 'dakuten' },
+                { char: 'ベ', romaji: 'be', type: 'kata', group: 'dakuten' },
+                { char: 'ボ', romaji: 'bo', type: 'kata', group: 'dakuten' },
 
-    // Renderizar seleção de caracteres
-    function renderCharSelection() {
-      const sections = document.getElementById('sections');
-      sections.innerHTML = '';
-      const mode = document.getElementById('mode').value;
+                // Katakana Handakuten
+                { char: 'パ', romaji: 'pa', type: 'kata', group: 'handakuten' },
+                { char: 'ピ', romaji: 'pi', type: 'kata', group: 'handakuten' },
+                { char: 'プ', romaji: 'pu', type: 'kata', group: 'handakuten' },
+                { char: 'ペ', romaji: 'pe', type: 'kata', group: 'handakuten' },
+                { char: 'ポ', romaji: 'po', type: 'kata', group: 'handakuten' },
+            ];
 
-      const groups = {
-        'Hiragana Básico': c => c.type === 'hira' && c.group === 'basic',
-        'Hiragana Dakuten (゛)': c => c.type === 'hira' && c.group === 'dakuten',
-        'Hiragana Handakuten (゜)': c => c.type === 'hira' && c.group === 'handakuten',
-        'Katakana Básico': c => c.type === 'kata' && c.group === 'basic',
-        'Katakana Dakuten (゛)': c => c.type === 'kata' && c.group === 'dakuten',
-        'Katakana Handakuten (゜)': c => c.type === 'kata' && c.group === 'handakuten'
-      };
+            // Estado
+            const savedStats = JSON.parse(localStorage.getItem('kanaStats') || '{"hits":0,"miss":0,"perKana":{}}');
+            let hits = savedStats.hits || 0;
+            let miss = savedStats.miss || 0;
+            let perKana = savedStats.perKana || {};
+            let quizList = [];
+            let currentIndex = 0;
+            let startTime = null;
+            let timerInterval = null;
 
-      Object.entries(groups).forEach(([title, filterFn]) => {
-        const filtered = allChars.filter(c => {
-          if (mode === 'hira' && c.type !== 'hira') return false;
-          if (mode === 'kata' && c.type !== 'kata') return false;
-          return filterFn(c);
-        });
+            // Theme toggle
+            const themeToggle = document.getElementById('themeToggle');
+            const moonIcon = document.getElementById('moonIcon');
+            const sunIcon = document.getElementById('sunIcon');
+            const savedTheme = localStorage.getItem('theme');
 
-        if (!filtered.length) return;
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+                moonIcon.classList.add('hidden');
+                sunIcon.classList.remove('hidden');
+            }
 
-        const h3 = document.createElement('h3');
-        h3.className = 'section-title';
-        h3.textContent = title;
-        sections.appendChild(h3);
+            themeToggle.onclick = () => {
+                document.body.classList.toggle('dark');
+                const isDark = document.body.classList.contains('dark');
 
-        const grid = document.createElement('div');
-        grid.className = 'grid';
+                if (isDark) {
+                    moonIcon.classList.add('hidden');
+                    sunIcon.classList.remove('hidden');
+                } else {
+                    moonIcon.classList.remove('hidden');
+                    sunIcon.classList.add('hidden');
+                }
 
-        filtered.forEach((c, idx) => {
-          const charIdx = allChars.indexOf(c);
-          const div = document.createElement('div');
-          div.className = 'char-checkbox';
-          div.innerHTML = `
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            };
+
+            // Renderizar seleção de caracteres
+            function renderCharSelection() {
+                const sections = document.getElementById('sections');
+                sections.innerHTML = '';
+                const mode = document.getElementById('mode').value;
+
+                const groups = {
+                    'Hiragana Básico': (c) => c.type === 'hira' && c.group === 'basic',
+                    'Hiragana Dakuten (゛)': (c) => c.type === 'hira' && c.group === 'dakuten',
+                    'Hiragana Handakuten (゜)': (c) => c.type === 'hira' && c.group === 'handakuten',
+                    'Katakana Básico': (c) => c.type === 'kata' && c.group === 'basic',
+                    'Katakana Dakuten (゛)': (c) => c.type === 'kata' && c.group === 'dakuten',
+                    'Katakana Handakuten (゜)': (c) => c.type === 'kata' && c.group === 'handakuten',
+                };
+
+                Object.entries(groups).forEach(([title, filterFn]) => {
+                    const filtered = allChars.filter((c) => {
+                        if (mode === 'hira' && c.type !== 'hira') return false;
+                        if (mode === 'kata' && c.type !== 'kata') return false;
+                        return filterFn(c);
+                    });
+
+                    if (!filtered.length) return;
+
+                    const h3 = document.createElement('h3');
+                    h3.className = 'section-title';
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.textContent = title;
+                    h3.appendChild(titleSpan);
+
+                    const controls = document.createElement('div');
+                    controls.className = 'section-controls';
+
+                    const selectAllBtn = document.createElement('button');
+                    selectAllBtn.textContent = 'Todos';
+                    selectAllBtn.type = 'button';
+                    selectAllBtn.onclick = (e) => {
+                        e.preventDefault();
+                        const grid = h3.nextElementSibling;
+                        grid.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = true));
+                    };
+
+                    const deselectAllBtn = document.createElement('button');
+                    deselectAllBtn.textContent = 'Nenhum';
+                    deselectAllBtn.type = 'button';
+                    deselectAllBtn.onclick = (e) => {
+                        e.preventDefault();
+                        const grid = h3.nextElementSibling;
+                        grid.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false));
+                    };
+
+                    controls.appendChild(selectAllBtn);
+                    controls.appendChild(deselectAllBtn);
+                    h3.appendChild(controls);
+
+                    sections.appendChild(h3);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'grid';
+
+                    filtered.forEach((c, idx) => {
+                        const charIdx = allChars.indexOf(c);
+                        const div = document.createElement('div');
+                        div.className = 'char-checkbox';
+                        div.innerHTML = `
             <input type="checkbox" id="char-${charIdx}" value="${charIdx}" checked>
             <label for="char-${charIdx}">${c.char}</label>
           `;
-          grid.appendChild(div);
-        });
+                        grid.appendChild(div);
+                    });
 
-        sections.appendChild(grid);
-      });
-    }
+                    sections.appendChild(grid);
+                });
+            }
 
-    document.getElementById('mode').onchange = renderCharSelection;
-    renderCharSelection();
+            document.getElementById('mode').onchange = renderCharSelection;
+            renderCharSelection();
 
-    // Shuffle array
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
+            // Shuffle array
+            function shuffle(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
 
-    // Iniciar quiz
-    function startQuiz() {
-      quizList = [];
-      currentIndex = 0;
-      const repeat = Number(document.getElementById('repeat').value);
-      
-      document.querySelectorAll('#sections input:checked').forEach(cb => {
-        const c = allChars[cb.value];
-        for (let i = 0; i < repeat; i++) {
-          quizList.push(c);
-        }
-      });
+            // Iniciar quiz
+            let quizMode = 'normal';
+            let selectedChars = []; // Lista de caracteres selecionados para o modo reverso
 
-      if (quizList.length === 0) {
-        alert('Selecione pelo menos um caractere!');
-        return;
-      }
+            function startQuiz() {
+                quizList = [];
+                currentIndex = 0;
+                hits = 0;
+                miss = 0;
+                quizMode = document.getElementById('quizType').value;
+                const repeat = Number(document.getElementById('repeat').value);
 
-      shuffle(quizList);
-      document.getElementById('setup').classList.add('hidden');
-      document.getElementById('quiz').classList.remove('hidden');
-      showNextChar();
-    }
+                selectedChars = [];
+                document.querySelectorAll('#sections input:checked').forEach((cb) => {
+                    const c = allChars[cb.value];
+                    selectedChars.push(c);
+                });
 
-    // Mostrar próximo caractere
-    function showNextChar() {
-      if (currentIndex >= quizList.length) {
-        alert(`Quiz finalizado!\n✅ Acertos: ${hits}\n❌ Erros: ${miss}`);
-        document.getElementById('quiz').classList.add('hidden');
-        document.getElementById('setup').classList.remove('hidden');
-        return;
-      }
+                if (selectedChars.length === 0) {
+                    alert('Selecione pelo menos um caractere!');
+                    return;
+                }
 
-      const progress = document.getElementById('progress');
-      progress.textContent = `Questão ${currentIndex + 1} de ${quizList.length}`;
-      
-      document.getElementById('currentChar').textContent = quizList[currentIndex].char;
-      document.getElementById('answer').value = '';
-      document.getElementById('answer').focus();
-    }
+                // Para modo combo, criar grupos de 3 caracteres
+                if (quizMode === 'combo') {
+                    for (let i = 0; i < repeat; i++) {
+                        // Embaralhar e criar combos
+                        const shuffledChars = [...selectedChars];
+                        shuffle(shuffledChars);
 
-    // Mostrar feedback visual
-    function showFeedback(isCorrect) {
-      const feedback = document.getElementById('feedback');
-      feedback.textContent = isCorrect ? '✅' : '❌';
-      feedback.classList.add('show');
-      
-      setTimeout(() => {
-        feedback.classList.remove('show');
-      }, 500);
-    }
+                        for (let j = 0; j < shuffledChars.length; j += 3) {
+                            const combo = shuffledChars.slice(j, j + 3);
+                            if (combo.length === 3) {
+                                quizList.push(combo);
+                            }
+                        }
+                    }
+                } else {
+                    // Modos normal e reverso
+                    selectedChars.forEach((c) => {
+                        for (let i = 0; i < repeat; i++) {
+                            quizList.push(c);
+                        }
+                    });
+                }
 
-    // Submeter resposta
-    function submitAnswer() {
-      const input = document.getElementById('answer').value.trim().toLowerCase();
-      const current = quizList[currentIndex];
+                if (quizList.length === 0) {
+                    alert('Não há caracteres suficientes para criar combos! Selecione pelo menos 3.');
+                    return;
+                }
 
-      if (!input) return;
+                shuffle(quizList);
+                document.getElementById('setup').classList.add('hidden');
+                document.getElementById('quiz').classList.remove('hidden');
 
-      if (!perKana[current.char]) {
-        perKana[current.char] = { hits: 0, miss: 0 };
-      }
+                // Mostrar/esconder modos apropriados
+                document.getElementById('normalMode').classList.add('hidden');
+                document.getElementById('reverseMode').classList.add('hidden');
+                document.getElementById('comboMode').classList.add('hidden');
 
-      if (input === current.romaji) {
-        hits++;
-        perKana[current.char].hits++;
-        showFeedback(true);
-        
-        localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
-        document.getElementById('hits').textContent = hits;
-        document.getElementById('miss').textContent = miss;
+                if (quizMode === 'reverse') {
+                    document.getElementById('reverseMode').classList.remove('hidden');
+                } else if (quizMode === 'combo') {
+                    document.getElementById('comboMode').classList.remove('hidden');
+                } else {
+                    document.getElementById('normalMode').classList.remove('hidden');
+                }
 
-        currentIndex++;
-        setTimeout(showNextChar, 300);
-      } else {
-        miss++;
-        perKana[current.char].miss++;
-        showFeedback(false);
-        
-        // Mostrar resposta correta
-        const answerInput = document.getElementById('answer');
-        answerInput.value = current.romaji;
-        answerInput.style.borderColor = 'var(--error)';
-        answerInput.style.background = 'rgba(239, 71, 111, 0.1)';
-        answerInput.disabled = true;
-        
-        localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
-        document.getElementById('hits').textContent = hits;
-        document.getElementById('miss').textContent = miss;
+                // Iniciar timer
+                startTime = Date.now();
+                updateTimer();
+                timerInterval = setInterval(updateTimer, 1000);
 
-        // Adiciona o caractere errado no final da lista (não imediatamente após)
-        quizList.push(current);
+                showNextChar();
+            }
 
-        // Espera 2 segundos antes de pular para o próximo
-        setTimeout(() => {
-          answerInput.style.borderColor = '';
-          answerInput.style.background = '';
-          answerInput.disabled = false;
-          currentIndex++;
-          showNextChar();
-        }, 2000);
-      }
-    }
+            // Atualizar timer
+            function updateTimer() {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('timer').textContent =
+                    `⏱️ ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
 
-    // Enter para submeter
-    document.getElementById('answer').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        submitAnswer();
-      }
-    });
-  </script>
-</body>
+            // Parar timer
+            function stopTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+            }
+
+            // Mostrar próximo caractere
+            function showNextChar() {
+                if (currentIndex >= quizList.length) {
+                    stopTimer();
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    const timeStr = `${minutes}min ${seconds}s`;
+
+                    alert(`Quiz finalizado! 🎉\n\n⏱️ Tempo: ${timeStr}\n✅ Acertos: ${hits}\n❌ Erros: ${miss}`);
+                    document.getElementById('quiz').classList.add('hidden');
+                    document.getElementById('setup').classList.remove('hidden');
+                    return;
+                }
+
+                const progress = document.getElementById('progress');
+                progress.textContent = `Questão ${currentIndex + 1} de ${quizList.length}`;
+
+                if (quizMode === 'normal') {
+                    document.getElementById('currentChar').textContent = quizList[currentIndex].char;
+                    document.getElementById('answer').value = '';
+                    document.getElementById('answer').focus();
+                } else if (quizMode === 'combo') {
+                    showComboQuestion();
+                } else {
+                    showReverseQuestion();
+                }
+            }
+
+            // Mostrar questão no modo combo
+            function showComboQuestion() {
+                const combo = quizList[currentIndex];
+                const comboDiv = document.getElementById('comboChars');
+                comboDiv.innerHTML = combo.map((c) => `<span>${c.char}</span>`).join('');
+                document.getElementById('comboAnswer').value = '';
+                document.getElementById('comboAnswer').focus();
+            }
+
+            // Submeter resposta do modo combo
+            function submitComboAnswer() {
+                const input = document.getElementById('comboAnswer').value.trim().toLowerCase();
+                const combo = quizList[currentIndex];
+                const correctAnswer = combo.map((c) => c.romaji).join('');
+
+                if (!input) return;
+
+                combo.forEach((c) => {
+                    if (!perKana[c.char]) {
+                        perKana[c.char] = { hits: 0, miss: 0 };
+                    }
+                });
+
+                if (input === correctAnswer) {
+                    hits++;
+                    combo.forEach((c) => perKana[c.char].hits++);
+                    showFeedback(true);
+
+                    localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+                    currentIndex++;
+                    setTimeout(showNextChar, 300);
+                } else {
+                    miss++;
+                    combo.forEach((c) => perKana[c.char].miss++);
+                    showFeedback(false);
+
+                    // Mostrar resposta correta e desabilitar input e botão
+                    const answerInput = document.getElementById('comboAnswer');
+                    const submitBtn = document.querySelector('#comboMode button');
+
+                    answerInput.value = correctAnswer;
+                    answerInput.style.borderColor = 'var(--error)';
+                    answerInput.style.background = 'rgba(239, 71, 111, 0.1)';
+                    answerInput.disabled = true;
+                    submitBtn.disabled = true;
+
+                    localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+                    // Adiciona o combo errado no final da lista
+                    quizList.push(combo);
+
+                    // Espera 2 segundos antes de pular para o próximo
+                    setTimeout(() => {
+                        answerInput.style.borderColor = '';
+                        answerInput.style.background = '';
+                        answerInput.disabled = false;
+                        submitBtn.disabled = false;
+                        currentIndex++;
+                        showNextChar();
+                    }, 2000);
+                }
+            }
+
+            // Mostrar questão no modo reverso
+            function showReverseQuestion() {
+                const current = quizList[currentIndex];
+                document.getElementById('romajiDisplay').textContent = current.romaji;
+
+                // Gerar 2 opções erradas aleatórias
+                const wrongOptions = [];
+                const availableChars = selectedChars.filter((c) => c.char !== current.char);
+
+                while (wrongOptions.length < 2 && availableChars.length > 0) {
+                    const randomIdx = Math.floor(Math.random() * availableChars.length);
+                    const wrongChar = availableChars[randomIdx];
+
+                    // Evitar duplicatas e caracteres com mesmo romaji
+                    if (!wrongOptions.find((w) => w.char === wrongChar.char) && wrongChar.romaji !== current.romaji) {
+                        wrongOptions.push(wrongChar);
+                    }
+                    availableChars.splice(randomIdx, 1);
+                }
+
+                // Misturar opções
+                const options = [current, ...wrongOptions];
+                shuffle(options);
+
+                // Renderizar opções
+                const optionsDiv = document.getElementById('charOptions');
+                optionsDiv.innerHTML = '';
+
+                options.forEach((option) => {
+                    const btn = document.createElement('div');
+                    btn.className = 'char-option';
+                    btn.textContent = option.char;
+                    btn.onclick = () => checkReverseAnswer(option.char === current.char, btn);
+                    optionsDiv.appendChild(btn);
+                });
+            }
+
+            // Verificar resposta do modo reverso
+            function checkReverseAnswer(isCorrect, clickedBtn) {
+                const current = quizList[currentIndex];
+
+                // Desabilitar todos os botões
+                document.querySelectorAll('.char-option').forEach((btn) => {
+                    btn.classList.add('disabled');
+                });
+
+                if (!perKana[current.char]) {
+                    perKana[current.char] = { hits: 0, miss: 0 };
+                }
+
+                if (isCorrect) {
+                    hits++;
+                    perKana[current.char].hits++;
+                    clickedBtn.classList.add('correct');
+                    showFeedback(true);
+
+                    localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+                    currentIndex++;
+                    setTimeout(showNextChar, 800);
+                } else {
+                    miss++;
+                    perKana[current.char].miss++;
+                    clickedBtn.classList.add('wrong');
+
+                    // Destacar a resposta correta
+                    document.querySelectorAll('.char-option').forEach((btn) => {
+                        if (btn.textContent === current.char) {
+                            btn.classList.add('correct');
+                        }
+                    });
+
+                    showFeedback(false);
+
+                    localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+                    // Adiciona no final da lista
+                    quizList.push(current);
+
+                    setTimeout(() => {
+                        currentIndex++;
+                        showNextChar();
+                    }, 2000);
+                }
+            }
+
+            // Mostrar feedback visual
+            function showFeedback(isCorrect) {
+                const feedback = document.getElementById('feedback');
+                feedback.textContent = isCorrect ? '✅' : '❌';
+                feedback.classList.add('show');
+
+                setTimeout(() => {
+                    feedback.classList.remove('show');
+                }, 500);
+            }
+
+            // Submeter resposta
+            function submitAnswer() {
+                const input = document.getElementById('answer').value.trim().toLowerCase();
+                const current = quizList[currentIndex];
+
+                if (!input) return;
+
+                if (!perKana[current.char]) {
+                    perKana[current.char] = { hits: 0, miss: 0 };
+                }
+
+                if (input === current.romaji) {
+                    hits++;
+                    perKana[current.char].hits++;
+                    showFeedback(true);
+
+                    localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+                    currentIndex++;
+                    setTimeout(showNextChar, 300);
+                } else {
+                    miss++;
+                    perKana[current.char].miss++;
+                    showFeedback(false);
+
+                    // Mostrar resposta correta e desabilitar input e botão
+                    const answerInput = document.getElementById('answer');
+                    const submitBtn = document.querySelector('#normalMode button');
+
+                    answerInput.value = current.romaji;
+                    answerInput.style.borderColor = 'var(--error)';
+                    answerInput.style.background = 'rgba(239, 71, 111, 0.1)';
+                    answerInput.disabled = true;
+                    submitBtn.disabled = true;
+
+                    localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+                    // Adiciona o caractere errado no final da lista (não imediatamente após)
+                    quizList.push(current);
+
+                    // Espera 2 segundos antes de pular para o próximo
+                    setTimeout(() => {
+                        answerInput.style.borderColor = '';
+                        answerInput.style.background = '';
+                        answerInput.disabled = false;
+                        submitBtn.disabled = false;
+                        currentIndex++;
+                        showNextChar();
+                    }, 2000);
+                }
+            }
+
+            // Enter para submeter
+            document.getElementById('answer').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitAnswer();
+                }
+            });
+
+            document.getElementById('comboAnswer').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    submitComboAnswer();
+                }
+            });
+        </script>
+    </body>
 </html>
