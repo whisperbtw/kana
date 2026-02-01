@@ -164,6 +164,16 @@ let currentIndex = 0;
 let startTime = null;
 let timerInterval = null;
 
+// Variáveis para modo estudo
+let studyCharStats = {}; // Rastrear acertos/erros por caractere no modo estudo
+let studyBlocks = []; // Blocos de 4 caracteres
+let currentBlockIndex = 0; // Índice do bloco atual
+let currentBlock = []; // Caracteres do bloco atual
+let repetitionsPerChar = 0; // Número de vezes que cada caractere precisa ser acertado
+let isShowingTeach = false; // Flag para indicar se está mostrando a resposta
+let blockTeachingPhase = true; // Flag para fase de ensinamento do bloco
+let activeCharPool = []; // Pool de caracteres ativos (em aprendizado/prática)
+
 // Função para criar modal customizado
 function showModal(title, message, buttons) {
     const overlay = document.createElement('div');
@@ -353,6 +363,39 @@ function startQuiz() {
                 }
             }
         }
+    } else if (quizMode === 'study') {
+        // Modo estudo: blocos de 4 caracteres com progressão
+        studyCharStats = {};
+        repetitionsPerChar = repeat;
+        blockTeachingPhase = true; // Iniciar em fase de ensinamento
+        activeCharPool = []; // Caracteres em aprendizado/prática
+
+        // Inicializar stats para cada caractere
+        selectedChars.forEach((c) => {
+            studyCharStats[c.char] = {
+                correct: 0,
+                incorrect: 0,
+                firstTime: true,
+                teach: false,
+            };
+        });
+
+        // Embaralhar TODOS os caracteres primeiro
+        const shuffledChars = [...selectedChars];
+        shuffle(shuffledChars);
+
+        // Criar blocos de 4 caracteres a partir dos embaralhados
+        studyBlocks = [];
+        for (let i = 0; i < shuffledChars.length; i += 4) {
+            const block = shuffledChars.slice(i, i + 4);
+            studyBlocks.push(block);
+        }
+
+        // Iniciar com os primeiros 4 na pool ativa
+        currentBlockIndex = 0;
+        activeCharPool = [...studyBlocks[0]];
+        quizList = [...activeCharPool];
+        shuffle(quizList);
     } else {
         // Modos normal e reverso
         selectedChars.forEach((c) => {
@@ -378,11 +421,14 @@ function startQuiz() {
     document.getElementById('normalMode').classList.add('hidden');
     document.getElementById('reverseMode').classList.add('hidden');
     document.getElementById('comboMode').classList.add('hidden');
+    document.getElementById('studyMode').classList.add('hidden');
 
     if (quizMode === 'reverse') {
         document.getElementById('reverseMode').classList.remove('hidden');
     } else if (quizMode === 'combo') {
         document.getElementById('comboMode').classList.remove('hidden');
+    } else if (quizMode === 'study') {
+        document.getElementById('studyMode').classList.remove('hidden');
     } else {
         document.getElementById('normalMode').classList.remove('hidden');
     }
@@ -422,6 +468,48 @@ function stopTimer() {
 
 // Mostrar próximo caractere
 function showNextChar() {
+    // Para modo estudo, verificar se o bloco foi completado
+    if (quizMode === 'study') {
+        // Verificar se completou fase de ensinamento
+        if (blockTeachingPhase) {
+            const teachingComplete = activeCharPool.every((c) => !studyCharStats[c.char].firstTime);
+
+            if (teachingComplete) {
+                // Passar para fase de prática sem modal
+                blockTeachingPhase = false;
+                currentIndex = 0;
+                // Criar lista de prática com os caracteres ativos
+                quizList = [...activeCharPool];
+                shuffle(quizList);
+                showNextChar();
+                return;
+            }
+        }
+
+        // Verificar se todos os caracteres foram completados
+        const allComplete = selectedChars.every((c) => studyCharStats[c.char].correct >= repetitionsPerChar);
+
+        if (allComplete) {
+            // Todos os caracteres concluídos
+            stopTimer();
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            const timeStr = `${minutes}min ${seconds}s`;
+
+            showModal(
+                '🎉 Quiz Finalizado!',
+                `
+                <div class="stat-line">⏱️ Tempo: ${timeStr}</div>
+                <div class="stat-line">✅ Acertos: ${hits}</div>
+                <div class="stat-line">❌ Erros: ${miss}</div>
+              `,
+                [{ text: 'OK', type: 'primary', onClick: exitQuiz }],
+            );
+            return;
+        }
+    }
+
     if (currentIndex >= quizList.length) {
         stopTimer();
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -450,6 +538,8 @@ function showNextChar() {
         document.getElementById('answer').focus();
     } else if (quizMode === 'combo') {
         showComboQuestion();
+    } else if (quizMode === 'study') {
+        showStudyQuestion();
     } else {
         showReverseQuestion();
     }
@@ -680,6 +770,248 @@ document.getElementById('comboAnswer').addEventListener('keypress', (e) => {
         submitComboAnswer();
     }
 });
+
+// FUNÇÕES PARA MODO ESTUDO
+function showStudyQuestion() {
+    const current = quizList[currentIndex];
+    const stats = studyCharStats[current.char];
+
+    // Calcular progresso total de todos os caracteres selecionados
+    const completedTotal = selectedChars.filter((c) => studyCharStats[c.char].correct >= repetitionsPerChar).length;
+    const totalChars = selectedChars.length;
+
+    // Atualizar barra de progresso com progresso total
+    const progress = document.getElementById('progress');
+    progress.textContent = `${completedTotal} de ${totalChars}`;
+
+    // Se é a primeira vez que aparece esse caractere, mostrar ensinamento
+    if (stats.firstTime) {
+        showStudyTeachFirst(current);
+    }
+    // Se o caractere foi errado muitas vezes, mostrar resposta novamente
+    else if (stats.teach) {
+        showStudyTeachAgain(current);
+    }
+    // Caso contrário, praticar com opções
+    else {
+        showStudyPractice(current);
+    }
+}
+
+function showStudyTeachFirst(current) {
+    // Primeira apresentação: apenas o romaji e botão OK
+    const teachingDiv = document.getElementById('studyTeaching');
+    teachingDiv.innerHTML = `<strong>📖 Aprenda:</strong> <span style="font-size: 1.5em; color: var(--primary);">${current.romaji}</span>`;
+
+    const charDiv = document.getElementById('studyChar');
+    charDiv.textContent = current.char;
+
+    const optionsDiv = document.getElementById('studyOptions');
+    optionsDiv.innerHTML = '';
+
+    // Criar botão OK
+    const okBtn = document.createElement('div');
+    okBtn.className = 'study-option';
+    okBtn.style.gridColumn = 'span 2';
+    okBtn.style.fontSize = '1.2em';
+    okBtn.textContent = '✅ Entendi';
+    okBtn.onclick = () => markFirstTimeAndContinue(current);
+    optionsDiv.appendChild(okBtn);
+}
+
+function markFirstTimeAndContinue(current) {
+    studyCharStats[current.char].firstTime = false;
+    showFeedback(true);
+    currentIndex++;
+    setTimeout(() => {
+        showNextChar();
+    }, 600);
+}
+
+function showStudyPractice(current) {
+    // Praticar com opções
+    const teachingDiv = document.getElementById('studyTeaching');
+    teachingDiv.innerHTML = '<strong>📚 Prática</strong>';
+
+    // Mostrar o caractere
+    document.getElementById('studyChar').textContent = current.char;
+
+    // Gerar 4 opções: 1 correta + 3 erradas aleatórias
+    const wrongOptions = [];
+    const availableChars = selectedChars.filter((c) => c.char !== current.char);
+
+    while (wrongOptions.length < 3 && availableChars.length > 0) {
+        const randomIdx = Math.floor(Math.random() * availableChars.length);
+        const wrongChar = availableChars[randomIdx];
+
+        // Evitar duplicatas e caracteres com mesmo romaji
+        if (!wrongOptions.find((w) => w.romaji === wrongChar.romaji) && wrongChar.romaji !== current.romaji) {
+            wrongOptions.push(wrongChar);
+        }
+        availableChars.splice(randomIdx, 1);
+    }
+
+    // Se não tiver 3 opções erradas, adicionar qualquer uma
+    while (wrongOptions.length < 3 && availableChars.length > 0) {
+        const randomIdx = Math.floor(Math.random() * availableChars.length);
+        wrongOptions.push(availableChars[randomIdx]);
+        availableChars.splice(randomIdx, 1);
+    }
+
+    // Misturar opções
+    const options = [current.romaji, ...wrongOptions.map((c) => c.romaji)];
+    shuffle(options);
+
+    // Renderizar opções
+    const optionsDiv = document.getElementById('studyOptions');
+    optionsDiv.innerHTML = '';
+
+    options.forEach((option) => {
+        const btn = document.createElement('div');
+        btn.className = 'study-option';
+        btn.textContent = option;
+        btn.onclick = () => checkStudyAnswer(option === current.romaji, btn, current);
+        optionsDiv.appendChild(btn);
+    });
+}
+
+function showStudyTeachAgain(current) {
+    // Reapresentação com resposta destacada (porque errou demais)
+    const teachingDiv = document.getElementById('studyTeaching');
+    teachingDiv.innerHTML = `<strong>📖 Reaprendendo:</strong> <span style="font-size: 1.5em; color: var(--success); font-weight: 700;">${current.romaji}</span>`;
+
+    // Mostrar o caractere
+    document.getElementById('studyChar').textContent = current.char;
+
+    // Gerar 4 opções: 1 correta + 3 erradas
+    const wrongOptions = [];
+    const availableChars = selectedChars.filter((c) => c.char !== current.char);
+
+    while (wrongOptions.length < 3 && availableChars.length > 0) {
+        const randomIdx = Math.floor(Math.random() * availableChars.length);
+        const wrongChar = availableChars[randomIdx];
+
+        if (!wrongOptions.find((w) => w.romaji === wrongChar.romaji) && wrongChar.romaji !== current.romaji) {
+            wrongOptions.push(wrongChar);
+        }
+        availableChars.splice(randomIdx, 1);
+    }
+
+    while (wrongOptions.length < 3 && availableChars.length > 0) {
+        const randomIdx = Math.floor(Math.random() * availableChars.length);
+        wrongOptions.push(availableChars[randomIdx]);
+        availableChars.splice(randomIdx, 1);
+    }
+
+    // Misturar opções
+    const options = [current.romaji, ...wrongOptions.map((c) => c.romaji)];
+    shuffle(options);
+
+    // Renderizar opções
+    const optionsDiv = document.getElementById('studyOptions');
+    optionsDiv.innerHTML = '';
+
+    options.forEach((option) => {
+        const btn = document.createElement('div');
+        btn.className = 'study-option';
+        btn.textContent = option;
+        btn.onclick = () => checkStudyAnswer(option === current.romaji, btn, current);
+        optionsDiv.appendChild(btn);
+    });
+}
+
+function checkStudyAnswer(isCorrect, clickedBtn, current) {
+    const stats = studyCharStats[current.char];
+
+    // Desabilitar todos os botões
+    document.querySelectorAll('.study-option').forEach((btn) => {
+        btn.classList.add('disabled');
+    });
+
+    if (!perKana[current.char]) {
+        perKana[current.char] = { hits: 0, miss: 0 };
+    }
+
+    if (isCorrect) {
+        hits++;
+        perKana[current.char].hits++;
+        stats.correct++;
+        clickedBtn.classList.add('correct');
+        showFeedback(true);
+
+        localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+        // Verificar se todos os caracteres foram completados
+        const allComplete = selectedChars.every((c) => studyCharStats[c.char].correct >= repetitionsPerChar);
+
+        if (allComplete) {
+            // Todos completados, fim do quiz
+            setTimeout(showNextChar, 800);
+        } else {
+            // Remover caractere completo da pool ativa
+            activeCharPool = activeCharPool.filter((c) => c.char !== current.char);
+
+            // Se há mais caracteres na pool, continuar
+            if (activeCharPool.length > 0) {
+                // Verificar se pode adicionar novo do próximo bloco
+                if (!blockTeachingPhase && currentBlockIndex + 1 < studyBlocks.length) {
+                    // Já passou da fase de ensinamento, pode adicionar mais
+                    const nextBlock = studyBlocks[currentBlockIndex + 1];
+                    const charNotInPool = nextBlock.find((c) => !activeCharPool.find((ac) => ac.char === c.char));
+                    if (charNotInPool && activeCharPool.length < 4) {
+                        activeCharPool.push(charNotInPool);
+                    }
+                } else if (blockTeachingPhase && activeCharPool.length === 0) {
+                    // Completou todo o bloco na fase de ensinamento, passar para prática
+                    blockTeachingPhase = false;
+                }
+
+                currentIndex = 0;
+                quizList = [...activeCharPool];
+                shuffle(quizList);
+            } else {
+                // Nenhum caractere mais na pool, passou de tudo
+                currentIndex = 0;
+                quizList = [];
+            }
+
+            shuffle(quizList);
+            setTimeout(showNextChar, 800);
+        }
+    } else {
+        miss++;
+        perKana[current.char].miss++;
+        stats.incorrect++;
+        clickedBtn.classList.add('wrong');
+
+        // Mostrar resposta correta
+        document.querySelectorAll('.study-option').forEach((btn) => {
+            if (btn.textContent === current.romaji) {
+                btn.classList.add('correct');
+            }
+        });
+
+        showFeedback(false);
+
+        localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
+
+        // Se errou 2 vezes, ativa ensinamento para próxima vez
+        if (stats.incorrect >= 2) {
+            stats.teach = true;
+        }
+
+        // Embaralhar e mostrar aleatório (não repetir logo o mesmo)
+        setTimeout(() => {
+            document.querySelectorAll('.study-option').forEach((btn) => {
+                btn.classList.remove('disabled', 'correct', 'wrong');
+            });
+            currentIndex = 0;
+            quizList = [...activeCharPool];
+            shuffle(quizList);
+            showStudyQuestion();
+        }, 1500);
+    }
+}
 
 // Botão de sair
 document.getElementById('exitBtn').onclick = () => {

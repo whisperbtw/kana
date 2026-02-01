@@ -65,6 +65,7 @@
                     <option value="normal">Normal (Ver caractere → Digitar romaji)</option>
                     <option value="reverse">Reverso (Ver romaji → Clicar caractere)</option>
                     <option value="combo">Combo (Ver 3 caracteres → Digitar romaji junto)</option>
+                    <option value="study">Estudo (Aprender + Múltipla escolha)</option>
                 </select>
 
                 <label>Repetições por caractere</label>
@@ -102,6 +103,13 @@
                         autocomplete="off"
                     />
                     <button onclick="submitComboAnswer()">Confirmar</button>
+                </div>
+
+                <!-- Modo Estudo -->
+                <div id="studyMode" class="hidden">
+                    <div class="study-teaching" id="studyTeaching"></div>
+                    <div class="study-char" id="studyChar"></div>
+                    <div class="study-options" id="studyOptions"></div>
                 </div>
             </div>
         </div>
