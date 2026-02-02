@@ -953,13 +953,18 @@ function checkStudyAnswer(isCorrect, clickedBtn, current) {
 
             // Se há mais caracteres na pool, continuar
             if (activeCharPool.length > 0) {
-                // Verificar se pode adicionar novo do próximo bloco
-                if (!blockTeachingPhase && currentBlockIndex + 1 < studyBlocks.length) {
-                    // Já passou da fase de ensinamento, pode adicionar mais
+                // Tentar manter a pool com 4 caracteres adicionando do próximo bloco
+                if (!blockTeachingPhase && currentBlockIndex + 1 < studyBlocks.length && activeCharPool.length < 4) {
+                    // Pegar próximo bloco e adicionar caracteres que ainda não foram vistos
                     const nextBlock = studyBlocks[currentBlockIndex + 1];
-                    const charNotInPool = nextBlock.find((c) => !activeCharPool.find((ac) => ac.char === c.char));
-                    if (charNotInPool && activeCharPool.length < 4) {
-                        activeCharPool.push(charNotInPool);
+                    for (let char of nextBlock) {
+                        if (!activeCharPool.find((ac) => ac.char === char.char) && activeCharPool.length < 4) {
+                            activeCharPool.push(char);
+                        }
+                    }
+                    // Se conseguiu adicionar do próximo, avança o índice
+                    if (activeCharPool.length === 4) {
+                        currentBlockIndex++;
                     }
                 } else if (blockTeachingPhase && activeCharPool.length === 0) {
                     // Completou todo o bloco na fase de ensinamento, passar para prática
@@ -975,6 +980,7 @@ function checkStudyAnswer(isCorrect, clickedBtn, current) {
                 quizList = [];
             }
 
+            currentIndex = 0;
             shuffle(quizList);
             setTimeout(showNextChar, 800);
         }
