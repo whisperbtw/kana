@@ -4,11 +4,27 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Quiz Hiragana & Katakana</title>
-        <link rel="stylesheet" href="styles.css" />
+        <link rel="stylesheet" href="src/styles/main.css" />
     </head>
     <body>
         <div class="container">
-            <h1>かな Quiz 🎌</h1>
+            <header class="app-header">
+                <h1>かな Quiz 🎌</h1>
+                <p class="subtitle">Treine hiragana e katakana com foco em velocidade e memória.</p>
+                <section class="profile-card" id="profileCard" aria-label="Perfil de nivel">
+                    <div class="profile-top">
+                        <div class="profile-level">Nivel <span id="profileLevel">1</span></div>
+                        <div class="profile-rank" id="profileRank">Bronze</div>
+                    </div>
+                    <div class="xp-track">
+                        <div class="xp-fill" id="profileXpFill"></div>
+                    </div>
+                    <div class="profile-meta">
+                        <span id="profileXpText">0 / 80 XP</span>
+                        <span id="profileTotalXp">Total: 0 XP</span>
+                    </div>
+                </section>
+            </header>
 
             <button id="themeToggle" class="theme-toggle" aria-label="Alternar tema">
                 <svg
@@ -52,70 +68,72 @@
                 </svg>
             </button>
 
-            <div class="controls" id="setup">
-                <label>Modo de estudo</label>
-                <select id="mode">
-                    <option value="all">Hiragana + Katakana</option>
-                    <option value="hira">Só Hiragana</option>
-                    <option value="kata">Só Katakana</option>
-                </select>
+            <main class="app-main">
+                <div class="controls" id="setup">
+                    <label>Modo de estudo</label>
+                    <select id="mode">
+                        <option value="all">Hiragana + Katakana</option>
+                        <option value="hira">Só Hiragana</option>
+                        <option value="kata">Só Katakana</option>
+                    </select>
 
-                <label>Tipo de quiz</label>
-                <select id="quizType">
-                    <option value="normal">Normal (Ver caractere → Digitar romaji)</option>
-                    <option value="reverse">Reverso (Ver romaji → Clicar caractere)</option>
-                    <option value="combo">Combo (Ver 3 caracteres → Digitar romaji junto)</option>
-                    <option value="study">Estudo (Aprender + Múltipla escolha)</option>
-                </select>
+                    <label>Tipo de quiz</label>
+                    <select id="quizType">
+                        <option value="normal">Normal (Ver caractere → Digitar romaji)</option>
+                        <option value="reverse">Reverso (Ver romaji → Clicar caractere)</option>
+                        <option value="combo">Combo (Ver 3 caracteres → Digitar romaji junto)</option>
+                        <option value="study">Estudo (Aprender + Múltipla escolha)</option>
+                    </select>
 
-                <label>Repetições por caractere</label>
-                <input type="number" id="repeat" min="1" max="10" value="3" />
+                    <label>Repetições por caractere</label>
+                    <input type="number" id="repeat" min="1" max="10" value="3" />
 
-                <div id="sections"></div>
+                    <div id="sections"></div>
 
-                <button onclick="startQuiz()">Começar Quiz</button>
-            </div>
-
-            <div class="quiz hidden" id="quiz">
-                <div class="progress" id="progress"></div>
-                <div class="timer" id="timer">⏱️ 00:00</div>
-
-                <!-- Modo Normal -->
-                <div id="normalMode">
-                    <div class="char" id="currentChar"></div>
-                    <input type="text" id="answer" placeholder="Digite o romaji" autocomplete="off" />
-                    <button onclick="submitAnswer()">Confirmar</button>
+                    <button onclick="startQuiz()">Começar Quiz</button>
                 </div>
 
-                <!-- Modo Reverso -->
-                <div id="reverseMode" class="hidden">
-                    <div class="romaji-display" id="romajiDisplay"></div>
-                    <div class="char-options" id="charOptions"></div>
-                </div>
+                <div class="quiz hidden" id="quiz">
+                    <div class="progress" id="progress"></div>
+                    <div class="timer" id="timer">⏱️ 00:00</div>
 
-                <!-- Modo Combo -->
-                <div id="comboMode" class="hidden">
-                    <div class="combo-chars" id="comboChars"></div>
-                    <input
-                        type="text"
-                        id="comboAnswer"
-                        placeholder="Digite o romaji dos caracteres"
-                        autocomplete="off"
-                    />
-                    <button onclick="submitComboAnswer()">Confirmar</button>
-                </div>
+                    <!-- Modo Normal -->
+                    <div id="normalMode">
+                        <div class="char" id="currentChar"></div>
+                        <input type="text" id="answer" placeholder="Digite o romaji" autocomplete="off" />
+                        <button onclick="submitAnswer()">Confirmar</button>
+                    </div>
 
-                <!-- Modo Estudo -->
-                <div id="studyMode" class="hidden">
-                    <div class="study-teaching" id="studyTeaching"></div>
-                    <div class="study-char" id="studyChar"></div>
-                    <div class="study-options" id="studyOptions"></div>
+                    <!-- Modo Reverso -->
+                    <div id="reverseMode" class="hidden">
+                        <div class="romaji-display" id="romajiDisplay"></div>
+                        <div class="char-options" id="charOptions"></div>
+                    </div>
+
+                    <!-- Modo Combo -->
+                    <div id="comboMode" class="hidden">
+                        <div class="combo-chars" id="comboChars"></div>
+                        <input
+                            type="text"
+                            id="comboAnswer"
+                            placeholder="Digite o romaji dos caracteres"
+                            autocomplete="off"
+                        />
+                        <button onclick="submitComboAnswer()">Confirmar</button>
+                    </div>
+
+                    <!-- Modo Estudo -->
+                    <div id="studyMode" class="hidden">
+                        <div class="study-teaching" id="studyTeaching"></div>
+                        <div class="study-char" id="studyChar"></div>
+                        <div class="study-options" id="studyOptions"></div>
+                    </div>
                 </div>
-            </div>
+            </main>
         </div>
 
         <div class="feedback" id="feedback"></div>
 
-        <script src="script.js"></script>
+        <script type="module" src="src/js/main.js"></script>
     </body>
 </html>
