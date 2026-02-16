@@ -12,7 +12,6 @@ This project is organized for static hosting (GitHub Pages) with no Node.js runt
 - `src/styles/base.css`: variables, reset, base layout and typography
 - `src/styles/components.css`: interactive UI components
 - `src/styles/responsive.css`: media queries
-- `script.js` and `styles.css`: legacy files kept in root (not used by `index.html`)
 
 ## Notes
 
