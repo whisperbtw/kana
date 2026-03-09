@@ -9,6 +9,8 @@ let quizList = [];
 let currentIndex = 0;
 let startTime = null;
 let timerInterval = null;
+let preStartCountdownInterval = null;
+const pendingTimeouts = new Set();
 let sessionXpGained = 0;
 
 // Variáveis para modo estudo
@@ -286,6 +288,10 @@ let quizMode = 'normal';
 let selectedChars = []; // Lista de caracteres selecionados para o modo reverso
 
 function startQuiz() {
+    stopTimer();
+    stopPreStartCountdown();
+    clearPendingTimeouts();
+
     quizList = [];
     currentIndex = 0;
     hits = 0;
@@ -371,6 +377,7 @@ function startQuiz() {
     document.getElementById('setup').classList.add('hidden');
     document.getElementById('quiz').classList.remove('hidden');
     document.getElementById('exitBtn').classList.remove('hidden');
+    document.getElementById('restartBtn').classList.remove('hidden');
 
     // Mostrar/esconder modos apropriados
     document.getElementById('normalMode').classList.add('hidden');
@@ -388,20 +395,22 @@ function startQuiz() {
         document.getElementById('normalMode').classList.remove('hidden');
     }
 
-    // Iniciar timer
-    startTime = Date.now();
-    updateTimer();
-    timerInterval = setInterval(updateTimer, 1000);
-
-    showNextChar();
+    resetAnswerFields();
+    startRoundWithCountdown();
 }
 
 // Sair do quiz
 function exitQuiz() {
+    stopPreStartCountdown();
     stopTimer();
+    clearPendingTimeouts();
     document.getElementById('quiz').classList.add('hidden');
     document.getElementById('setup').classList.remove('hidden');
     document.getElementById('exitBtn').classList.add('hidden');
+    document.getElementById('restartBtn').classList.add('hidden');
+    document.getElementById('timer').textContent = '⏱️ 00:00';
+    document.getElementById('progress').textContent = '';
+    resetAnswerFields();
 }
 
 // Atualizar timer
@@ -419,6 +428,70 @@ function stopTimer() {
         clearInterval(timerInterval);
         timerInterval = null;
     }
+}
+
+function scheduleTask(callback, delayMs) {
+    const timeoutId = setTimeout(() => {
+        pendingTimeouts.delete(timeoutId);
+        callback();
+    }, delayMs);
+    pendingTimeouts.add(timeoutId);
+}
+
+function clearPendingTimeouts() {
+    pendingTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    pendingTimeouts.clear();
+}
+
+function stopPreStartCountdown() {
+    if (preStartCountdownInterval) {
+        clearInterval(preStartCountdownInterval);
+        preStartCountdownInterval = null;
+    }
+}
+
+function resetAnswerFields() {
+    const answerInput = document.getElementById('answer');
+    const comboAnswerInput = document.getElementById('comboAnswer');
+    const normalSubmitBtn = document.querySelector('#normalMode button');
+    const comboSubmitBtn = document.querySelector('#comboMode button');
+
+    [answerInput, comboAnswerInput].forEach((input) => {
+        input.value = '';
+        input.disabled = false;
+        input.style.borderColor = '';
+        input.style.background = '';
+    });
+
+    [normalSubmitBtn, comboSubmitBtn].forEach((button) => {
+        if (!button) return;
+        button.disabled = false;
+    });
+}
+
+function startRoundWithCountdown() {
+    stopPreStartCountdown();
+    const timerEl = document.getElementById('timer');
+    const progressEl = document.getElementById('progress');
+    let remainingSeconds = 3;
+
+    progressEl.textContent = 'Prepare-se...';
+    timerEl.textContent = `⏳ ${remainingSeconds}s`;
+
+    preStartCountdownInterval = setInterval(() => {
+        remainingSeconds--;
+
+        if (remainingSeconds <= 0) {
+            stopPreStartCountdown();
+            startTime = Date.now();
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+            showNextChar();
+            return;
+        }
+
+        timerEl.textContent = `⏳ ${remainingSeconds}s`;
+    }, 1000);
 }
 
 function getElapsedTimeText() {
@@ -527,7 +600,7 @@ function submitComboAnswer() {
         localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
 
         currentIndex++;
-        setTimeout(showNextChar, 300);
+        scheduleTask(showNextChar, 300);
     } else {
         miss++;
         combo.forEach((c) => perKana[c.char].miss++);
@@ -549,7 +622,7 @@ function submitComboAnswer() {
         quizList.push(combo);
 
         // Espera 2 segundos antes de pular para o próximo
-        setTimeout(() => {
+        scheduleTask(() => {
             answerInput.style.borderColor = '';
             answerInput.style.background = '';
             answerInput.disabled = false;
@@ -620,7 +693,7 @@ function checkReverseAnswer(isCorrect, clickedBtn) {
         localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
 
         currentIndex++;
-        setTimeout(showNextChar, 800);
+        scheduleTask(showNextChar, 800);
     } else {
         miss++;
         perKana[current.char].miss++;
@@ -640,7 +713,7 @@ function checkReverseAnswer(isCorrect, clickedBtn) {
         // Adiciona no final da lista
         quizList.push(current);
 
-        setTimeout(() => {
+        scheduleTask(() => {
             currentIndex++;
             showNextChar();
         }, 2000);
@@ -653,7 +726,7 @@ function showFeedback(isCorrect) {
     feedback.textContent = isCorrect ? '✅' : '❌';
     feedback.classList.add('show');
 
-    setTimeout(() => {
+    scheduleTask(() => {
         feedback.classList.remove('show');
     }, 500);
 }
@@ -678,7 +751,7 @@ function submitAnswer() {
         localStorage.setItem('kanaStats', JSON.stringify({ hits, miss, perKana }));
 
         currentIndex++;
-        setTimeout(showNextChar, 300);
+        scheduleTask(showNextChar, 300);
     } else {
         miss++;
         perKana[current.char].miss++;
@@ -700,7 +773,7 @@ function submitAnswer() {
         quizList.push(current);
 
         // Espera 2 segundos antes de pular para o próximo
-        setTimeout(() => {
+        scheduleTask(() => {
             answerInput.style.borderColor = '';
             answerInput.style.background = '';
             answerInput.disabled = false;
@@ -846,7 +919,7 @@ function markFirstTimeAndContinue(current) {
     studyCharStats[current.char].firstTime = false;
     showFeedback(true);
     currentIndex++;
-    setTimeout(() => {
+    scheduleTask(() => {
         showNextChar();
     }, 600);
 }
@@ -904,7 +977,7 @@ function checkStudyAnswer(isCorrect, clickedBtn, current) {
 
         if (allComplete) {
             // Todos completados, fim do quiz
-            setTimeout(showNextChar, 800);
+            scheduleTask(showNextChar, 800);
         } else {
             // Só remove da pool quando o caractere atingiu o total necessário de acertos.
             const reachedTarget = stats.correct >= repetitionsPerChar;
@@ -922,7 +995,7 @@ function checkStudyAnswer(isCorrect, clickedBtn, current) {
             }
 
             currentIndex = 0;
-            setTimeout(showNextChar, 800);
+            scheduleTask(showNextChar, 800);
         }
     } else {
         miss++;
@@ -947,7 +1020,7 @@ function checkStudyAnswer(isCorrect, clickedBtn, current) {
         }
 
         // Embaralhar e mostrar aleatório (não repetir logo o mesmo)
-        setTimeout(() => {
+        scheduleTask(() => {
             document.querySelectorAll('.study-option').forEach((btn) => {
                 btn.classList.remove('disabled', 'correct', 'wrong');
             });
@@ -962,6 +1035,14 @@ document.getElementById('exitBtn').onclick = () => {
     showModal('🚪 Sair do Quiz?', 'Tem certeza que deseja sair? Seu progresso será perdido.', [
         { text: 'Cancelar', type: 'secondary' },
         { text: 'Sair', type: 'primary', onClick: exitQuiz },
+    ]);
+};
+
+// BotÃ£o de reiniciar
+document.getElementById('restartBtn').onclick = () => {
+    showModal('🔄 Reiniciar Quiz?', 'Deseja reiniciar com as mesmas configurações?', [
+        { text: 'Cancelar', type: 'secondary' },
+        { text: 'Reiniciar', type: 'primary', onClick: startQuiz },
     ]);
 };
 
