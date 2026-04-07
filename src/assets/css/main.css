@@ -60,34 +60,6 @@ body {
   overflow-x: hidden;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
-  background-size: 38px 38px;
-  opacity: 0.18;
-  pointer-events: none;
-  z-index: 0;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  width: 340px;
-  height: 340px;
-  right: -120px;
-  bottom: -110px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(75, 85, 99, 0.32) 0%, rgba(75, 85, 99, 0) 72%);
-  filter: blur(8px);
-  pointer-events: none;
-  animation: floatGlow 8s ease-in-out infinite;
-  z-index: 0;
-}
-
 button,
 select,
 input {
@@ -96,16 +68,6 @@ input {
 
 button {
   border: none;
-}
-
-@keyframes floatGlow {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-16px) scale(1.04);
-  }
 }
 
 @keyframes riseIn {
@@ -183,7 +145,6 @@ h1 {
   text-align: center;
   font-size: clamp(2.2rem, 5vw, 3.35rem);
   margin-bottom: 10px;
-  font-family: 'Noto Sans JP', sans-serif;
   font-weight: 700;
   letter-spacing: -0.04em;
   background: linear-gradient(130deg, var(--primary), var(--secondary));
@@ -191,6 +152,10 @@ h1 {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   text-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+.jp-text {
+  font-family: 'Noto Sans JP', sans-serif;
 }
 
 .subtitle {
@@ -208,9 +173,8 @@ h1 {
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--tile) 90%, transparent);
+  background: color-mix(in srgb, var(--tile) 96%, #fff 4%);
   box-shadow: 0 10px 22px var(--shadow);
-  backdrop-filter: blur(8px);
 }
 
 .profile-top {
@@ -277,15 +241,19 @@ h1 {
   padding: 11px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: var(--tile);
+  background: color-mix(in srgb, var(--tile) 96%, #fff 4%);
   color: var(--text);
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 10px 24px var(--shadow);
-  backdrop-filter: blur(10px);
   z-index: 100;
 }
 
@@ -330,8 +298,7 @@ h1 {
 
 .controls,
 .quiz {
-  background: linear-gradient(170deg, color-mix(in srgb, var(--card) 82%, #fff 18%), var(--card));
-  backdrop-filter: blur(8px);
+  background: linear-gradient(170deg, color-mix(in srgb, var(--card) 94%, #fff 6%), var(--card));
   padding: clamp(22px, 3.5vw, 34px);
   border-radius: 24px;
   box-shadow: 0 18px 38px var(--shadow);
@@ -377,7 +344,11 @@ input[type='text'] {
   background: color-mix(in srgb, var(--tile) 82%, transparent);
   color: var(--text);
   font-family: 'JetBrains Mono', monospace;
-  transition: all 0.22s ease;
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background-color 0.22s ease,
+    color 0.22s ease;
 }
 
 input[type='text'] {
@@ -408,7 +379,6 @@ input.is-error {
   font-size: 1.04rem;
   margin: 22px 0 12px;
   color: var(--text);
-  font-family: 'Noto Sans JP', sans-serif;
   padding-left: 12px;
   border-left: 3px solid var(--secondary);
   display: flex;
@@ -513,7 +483,12 @@ input.is-error {
   text-transform: none;
   letter-spacing: 0;
   color: var(--text);
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .char-checkbox label:hover {
@@ -595,7 +570,13 @@ input.is-error {
   text-align: center;
   font-size: clamp(2rem, 6vw, 2.8rem);
   font-family: 'Noto Sans JP', sans-serif;
-  transition: all 0.22s ease;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    background-color 0.22s ease,
+    color 0.22s ease,
+    box-shadow 0.22s ease,
+    opacity 0.22s ease;
   background: color-mix(in srgb, var(--tile) 88%, transparent);
   color: var(--text);
 }
@@ -674,7 +655,13 @@ input.is-error {
   font-size: 1.3rem;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  transition: all 0.22s ease;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    background-color 0.22s ease,
+    color 0.22s ease,
+    box-shadow 0.22s ease,
+    opacity 0.22s ease;
   background: color-mix(in srgb, var(--tile) 88%, transparent);
   color: var(--text);
 }
@@ -708,18 +695,16 @@ input.is-error {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(11, 11, 18, 0.5);
+  background: rgba(11, 11, 18, 0.66);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
   animation: fadeInScale 0.24s ease-out;
 }
 
 .modal {
-  background: var(--card);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--card) 96%, #fff 4%);
   padding: 36px 30px;
   border-radius: 22px;
   max-width: 520px;
@@ -732,7 +717,6 @@ input.is-error {
   font-size: 1.9rem;
   text-align: center;
   margin-bottom: 16px;
-  font-family: 'Noto Sans JP', sans-serif;
 }
 
 .modal-content {
@@ -777,6 +761,17 @@ input.is-error {
 
 .modal-button:hover {
   transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @media (max-width: 760px) {

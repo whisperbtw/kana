@@ -1,141 +1,54 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { allChars, type KanaChar } from '~/data/chars';
+import { XP_REWARD, getSectionsForMode } from './kanaQuiz/core/constants';
+import { createDefaultProfile, getRankByLevel, getXpRequiredForLevel } from './kanaQuiz/profile/profile';
+import type {
+    KanaMode,
+    KanaStats,
+    Profile,
+    QuizEntry,
+    QuizMode,
+    StudyCharStat,
+    StudyPhase,
+    TeachingTone,
+    ThemeMode,
+} from './kanaQuiz/core/types';
+import { shuffle } from './kanaQuiz/shared/utils';
+import {
+    buildReverseOptions as createReverseOptions,
+    buildStudyOptions as createStudyOptions,
+    createComboQuizList,
+    createStandardQuizList,
+    createStudyModeData,
+} from './kanaQuiz/flow/modes';
+import {
+    loadStoredProfile,
+    loadStoredStats,
+    loadStoredTheme,
+    saveStoredProfile,
+    saveStoredStats,
+    saveStoredTheme,
+} from './kanaQuiz/persistence/storage';
+import { getElapsedTimeText } from './kanaQuiz/flow/timer';
+import {
+    createStudyQuestionState,
+    getStudyProgress,
+    isStudyComplete,
+    unlockNextStudyCharIfNeeded as getUnlockedStudyPool,
+} from './kanaQuiz/study/study';
+import { useKanaQuizRuntime } from './kanaQuiz/flow/runtime';
+import { createKanaQuizAnswerHandlers } from './kanaQuiz/flow/answerHandlers';
 
-type StudyCharStat = {
-    correct: number;
-    incorrect: number;
-    firstTime: boolean;
-    teach: boolean;
-};
-
-type KanaMode = 'all' | 'hira' | 'kata';
-type QuizMode = 'normal' | 'reverse' | 'combo' | 'study';
-type StudyPhase = 'first' | 'practice' | 'relearn';
-type ThemeMode = 'light' | 'dark';
-type QuizEntry = KanaChar | KanaChar[];
-type TeachingTone = 'primary' | 'success';
-
-type KanaStats = {
-    hits: number;
-    miss: number;
-};
-
-type ModalButton = {
-    text: string;
-    type?: 'primary' | 'secondary';
-    onClick?: () => void;
-};
-
-type Profile = {
-    version: number;
-    level: number;
-    xp: number;
-    totalXp: number;
-    rank: string;
-    updatedAt: number;
-};
-
-const THEME_STORAGE_KEY = 'kanaTheme';
-const STATS_STORAGE_KEY = 'kanaStats';
-const PROFILE_STORAGE_KEY = 'kanaProfileV1';
-
-const XP_REWARD = Object.freeze({
-    normal: 10,
-    reverse: 10,
-    combo: 16,
-    study: 12,
-});
-
-const SECTION_DEFINITIONS = [
-    {
-        title: 'Hiragana Básico',
-        filter: (char: KanaChar) => char.type === 'hira' && char.group === 'basic',
-    },
-    {
-        title: 'Hiragana Dakuten (゛)',
-        filter: (char: KanaChar) => char.type === 'hira' && char.group === 'dakuten',
-    },
-    {
-        title: 'Hiragana Handakuten (゜)',
-        filter: (char: KanaChar) => char.type === 'hira' && char.group === 'handakuten',
-    },
-    {
-        title: 'Katakana Básico',
-        filter: (char: KanaChar) => char.type === 'kata' && char.group === 'basic',
-    },
-    {
-        title: 'Katakana Dakuten (゛)',
-        filter: (char: KanaChar) => char.type === 'kata' && char.group === 'dakuten',
-    },
-    {
-        title: 'Katakana Handakuten (゜)',
-        filter: (char: KanaChar) => char.type === 'kata' && char.group === 'handakuten',
-    },
-] as const;
-
-function shuffle<T>(items: T[]) {
-    for (let index = items.length - 1; index > 0; index -= 1) {
-        const randomIndex = Math.floor(Math.random() * (index + 1));
-        const currentItem = items[index];
-        const randomItem = items[randomIndex];
-
-        if (currentItem === undefined || randomItem === undefined) {
-            continue;
-        }
-
-        items[index] = randomItem;
-        items[randomIndex] = currentItem;
-    }
-
-    return items;
-}
-
-function getXpRequiredForLevel(level: number) {
-    return 80 + (level - 1) * 35;
-}
-
-function getRankByLevel(level: number) {
-    if (level >= 35) return 'Master';
-    if (level >= 25) return 'Diamond';
-    if (level >= 15) return 'Gold';
-    if (level >= 8) return 'Silver';
-    return 'Bronze';
-}
-
-function createDefaultProfile(): Profile {
-    return {
-        version: 1,
-        level: 1,
-        xp: 0,
-        totalXp: 0,
-        rank: getRankByLevel(1),
-        updatedAt: Date.now(),
-    };
-}
-
-function normalizeProfile(rawProfile: Partial<Profile>): Profile {
-    const profile = { ...createDefaultProfile(), ...rawProfile };
-    profile.level = Number.isFinite(profile.level) && profile.level > 0 ? Math.floor(profile.level) : 1;
-    profile.xp = Number.isFinite(profile.xp) && profile.xp >= 0 ? Math.floor(profile.xp) : 0;
-    profile.totalXp = Number.isFinite(profile.totalXp) && profile.totalXp >= 0 ? Math.floor(profile.totalXp) : 0;
-
-    while (profile.xp >= getXpRequiredForLevel(profile.level)) {
-        profile.xp -= getXpRequiredForLevel(profile.level);
-        profile.level += 1;
-    }
-
-    profile.rank = getRankByLevel(profile.level);
-    profile.updatedAt = Date.now();
-    return profile;
-}
-
-function createDefaultStats() {
-    return {
-        hits: 0,
-        miss: 0,
-        perKana: {} as Record<string, KanaStats>,
-    };
-}
+export type {
+    IndexedKanaChar,
+    KanaMode,
+    ModalButton,
+    Profile,
+    QuizMode,
+    QuizSection,
+    StudyPhase,
+    TeachingTone,
+} from './kanaQuiz/core/types';
 
 export function useKanaQuiz() {
     const mode = ref<KanaMode>('all');
@@ -159,8 +72,6 @@ export function useKanaQuiz() {
     const quizList = ref<QuizEntry[]>([]);
     const currentIndex = ref(0);
     const progressText = ref('');
-    const timerText = ref('⏱️ 00:00');
-    const startTime = ref<number | null>(null);
 
     const normalAnswer = ref('');
     const comboAnswer = ref('');
@@ -186,45 +97,39 @@ export function useKanaQuiz() {
     const studyTeachingValue = ref('');
     const studyTeachingTone = ref<TeachingTone>('primary');
 
-    const feedbackVisible = ref(false);
-    const feedbackIcon = ref('');
-
-    const modalOpen = ref(false);
-    const modalTitle = ref('');
-    const modalContent = ref('');
-    const modalButtons = ref<ModalButton[]>([]);
-
     const normalAnswerRef = ref<HTMLInputElement | null>(null);
     const comboAnswerRef = ref<HTMLInputElement | null>(null);
-
-    let timerInterval: ReturnType<typeof setInterval> | null = null;
-    let preStartCountdownInterval: ReturnType<typeof setInterval> | null = null;
-    const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
     let hasHydrated = false;
 
+    const {
+        cleanupRuntime,
+        clearPendingTimeouts,
+        feedbackIcon,
+        feedbackVisible,
+        handleModalAction,
+        modalButtons,
+        modalContent,
+        modalOpen,
+        modalTitle,
+        resetFeedback,
+        resetRuntimeState,
+        scheduleTask,
+        showFeedback,
+        showModal,
+        startRoundWithCountdown: beginRoundWithCountdown,
+        startTime,
+        stopPreStartCountdown,
+        stopTimer,
+        timerText,
+    } = useKanaQuizRuntime();
+
     const isDark = computed(() => theme.value === 'dark');
-    const selectedIdSet = computed(() => new Set(selectedCharIds.value));
     const profileXpRequired = computed(() => getXpRequiredForLevel(profile.value.level));
     const profileProgress = computed(() => {
         return Math.max(0, Math.min(100, Math.round((profile.value.xp / profileXpRequired.value) * 100)));
     });
 
-    const allCharsWithIndex = allChars.map((char, index) => ({ ...char, index }));
-
-    const sections = computed(() => {
-        return SECTION_DEFINITIONS.map((section) => {
-            const chars = allCharsWithIndex.filter((char) => {
-                if (mode.value === 'hira' && char.type !== 'hira') return false;
-                if (mode.value === 'kata' && char.type !== 'kata') return false;
-                return section.filter(char);
-            });
-
-            return {
-                title: section.title,
-                chars,
-            };
-        }).filter((section) => section.chars.length > 0);
-    });
+    const sections = computed(() => getSectionsForMode(mode.value));
 
     const currentEntry = computed(() => quizList.value[currentIndex.value] ?? null);
     const currentKana = computed<KanaChar | null>(() => {
@@ -249,7 +154,7 @@ export function useKanaQuiz() {
     watch(theme, (value) => {
         if (!import.meta.client || !hasHydrated) return;
         document.body.classList.toggle('dark', value === 'dark');
-        localStorage.setItem(THEME_STORAGE_KEY, value);
+        saveStoredTheme(value);
     });
 
     onMounted(() => {
@@ -259,56 +164,33 @@ export function useKanaQuiz() {
     });
 
     onBeforeUnmount(() => {
-        stopTimer();
-        stopPreStartCountdown();
-        clearPendingTimeouts();
+        cleanupRuntime();
     });
 
     function hydrateStoredState() {
-        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-        if (savedTheme === 'dark' || savedTheme === 'light') {
+        const savedTheme = loadStoredTheme();
+
+        if (savedTheme) {
             theme.value = savedTheme;
         }
 
-        const rawStats = localStorage.getItem(STATS_STORAGE_KEY);
-        if (rawStats) {
-            try {
-                const parsed = JSON.parse(rawStats) as ReturnType<typeof createDefaultStats>;
-                perKana.value = parsed.perKana || {};
-            } catch {
-                perKana.value = {};
-            }
-        }
-
-        const rawProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (rawProfile) {
-            try {
-                profile.value = normalizeProfile(JSON.parse(rawProfile) as Partial<Profile>);
-            } catch {
-                profile.value = createDefaultProfile();
-            }
-        } else {
-            profile.value = createDefaultProfile();
-            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile.value));
-        }
+        perKana.value = loadStoredStats().perKana;
+        profile.value = loadStoredProfile();
     }
 
     function persistStats() {
         if (!import.meta.client) return;
 
-        localStorage.setItem(
-            STATS_STORAGE_KEY,
-            JSON.stringify({
-                hits: hits.value,
-                miss: miss.value,
-                perKana: perKana.value,
-            }),
-        );
+        saveStoredStats({
+            hits: hits.value,
+            miss: miss.value,
+            perKana: perKana.value,
+        });
     }
 
     function persistProfile() {
         if (!import.meta.client) return;
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile.value));
+        saveStoredProfile(profile.value);
     }
 
     function toggleTheme() {
@@ -324,56 +206,6 @@ export function useKanaQuiz() {
         }
 
         selectedCharIds.value = Array.from(nextSelection).sort((first, second) => first - second);
-    }
-
-    function getElapsedTimeText() {
-        if (!startTime.value) return '0min 0s';
-
-        const elapsed = Math.floor((Date.now() - startTime.value) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        return `${minutes}min ${seconds}s`;
-    }
-
-    function updateTimer() {
-        if (!startTime.value) {
-            timerText.value = '⏱️ 00:00';
-            return;
-        }
-
-        const elapsed = Math.floor((Date.now() - startTime.value) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        timerText.value = `⏱️ ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-
-    function stopTimer() {
-        if (!timerInterval) return;
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-
-    function stopPreStartCountdown() {
-        if (!preStartCountdownInterval) return;
-        clearInterval(preStartCountdownInterval);
-        preStartCountdownInterval = null;
-    }
-
-    function scheduleTask(callback: () => void, delayMs: number) {
-        const timeoutId = setTimeout(() => {
-            pendingTimeouts.delete(timeoutId);
-            callback();
-        }, delayMs);
-
-        pendingTimeouts.add(timeoutId);
-    }
-
-    function clearPendingTimeouts() {
-        for (const timeoutId of pendingTimeouts) {
-            clearTimeout(timeoutId);
-        }
-
-        pendingTimeouts.clear();
     }
 
     function resetInputs() {
@@ -396,16 +228,12 @@ export function useKanaQuiz() {
     }
 
     function resetSessionState() {
-        stopTimer();
-        stopPreStartCountdown();
-        clearPendingTimeouts();
+        resetRuntimeState();
         hits.value = 0;
         miss.value = 0;
         sessionXpGained.value = 0;
         currentIndex.value = 0;
-        startTime.value = null;
         progressText.value = '';
-        timerText.value = '⏱️ 00:00';
         quizList.value = [];
         selectedCharsSession.value = [];
         activeCharPool.value = [];
@@ -454,106 +282,14 @@ export function useKanaQuiz() {
         persistProfile();
     }
 
-    function showModal(title: string, content: string, buttons: ModalButton[]) {
-        modalTitle.value = title;
-        modalContent.value = content;
-        modalButtons.value = buttons;
-        modalOpen.value = true;
-    }
-
-    function handleModalAction(button: ModalButton) {
-        modalOpen.value = false;
-        modalTitle.value = '';
-        modalContent.value = '';
-        modalButtons.value = [];
-
-        if (button.text !== 'dismiss') {
-            button.onClick?.();
-        }
-    }
-
-    function showFeedback(isCorrect: boolean) {
-        feedbackIcon.value = isCorrect ? '✅' : '❌';
-        feedbackVisible.value = true;
-
-        scheduleTask(() => {
-            feedbackVisible.value = false;
-        }, 500);
-    }
-
     function buildReverseOptions(current: KanaChar) {
-        const wrongOptions: KanaChar[] = [];
-        const availableChars = selectedCharsSession.value.filter((char) => char.char !== current.char);
-
-        while (wrongOptions.length < 2 && availableChars.length > 0) {
-            const randomIndex = Math.floor(Math.random() * availableChars.length);
-            const wrongChar = availableChars[randomIndex];
-
-            if (!wrongChar) {
-                break;
-            }
-
-            if (!wrongOptions.find((char) => char.char === wrongChar.char) && wrongChar.romaji !== current.romaji) {
-                wrongOptions.push(wrongChar);
-            }
-
-            availableChars.splice(randomIndex, 1);
-        }
-
-        reverseOptions.value = shuffle([current, ...wrongOptions]);
+        reverseOptions.value = createReverseOptions(current, selectedCharsSession.value);
         reverseLocked.value = false;
         reverseSelectedChar.value = null;
     }
 
-    function getStudyProgress() {
-        const completed = selectedCharsSession.value.filter((char) => {
-            return (studyCharStats.value[char.char]?.correct ?? 0) >= repetitionsPerChar.value;
-        }).length;
-
-        return {
-            completed,
-            total: selectedCharsSession.value.length,
-        };
-    }
-
-    function isStudyComplete() {
-        return selectedCharsSession.value.every((char) => {
-            return (studyCharStats.value[char.char]?.correct ?? 0) >= repetitionsPerChar.value;
-        });
-    }
-
     function buildStudyOptions(current: KanaChar) {
-        const wrongOptions: KanaChar[] = [];
-        const availableChars = selectedCharsSession.value.filter((char) => char.char !== current.char);
-
-        while (wrongOptions.length < 3 && availableChars.length > 0) {
-            const randomIndex = Math.floor(Math.random() * availableChars.length);
-            const wrongChar = availableChars[randomIndex];
-
-            if (!wrongChar) {
-                break;
-            }
-
-            if (!wrongOptions.find((char) => char.romaji === wrongChar.romaji) && wrongChar.romaji !== current.romaji) {
-                wrongOptions.push(wrongChar);
-            }
-
-            availableChars.splice(randomIndex, 1);
-        }
-
-        while (wrongOptions.length < 3 && availableChars.length > 0) {
-            const randomIndex = Math.floor(Math.random() * availableChars.length);
-            const wrongChar = availableChars[randomIndex];
-
-            if (!wrongChar) {
-                break;
-            }
-
-            wrongOptions.push(wrongChar);
-            availableChars.splice(randomIndex, 1);
-        }
-
-        return shuffle([current.romaji, ...wrongOptions.map((char) => char.romaji)]);
+        return createStudyOptions(current, selectedCharsSession.value);
     }
 
     function refreshStudyQuizList() {
@@ -562,42 +298,13 @@ export function useKanaQuiz() {
     }
 
     function unlockNextStudyCharIfNeeded() {
-        if (blockTeachingPhase.value) return;
-
-        const nextChar = studyOrder.value.find((char) => {
-            return (
-                !activeCharPool.value.some((activeChar) => activeChar.char === char.char) &&
-                (studyCharStats.value[char.char]?.correct ?? 0) < repetitionsPerChar.value
-            );
+        activeCharPool.value = getUnlockedStudyPool({
+            blockTeachingPhase: blockTeachingPhase.value,
+            studyOrder: studyOrder.value,
+            activeCharPool: activeCharPool.value,
+            studyCharStats: studyCharStats.value,
+            repetitionsPerChar: repetitionsPerChar.value,
         });
-
-        if (nextChar) {
-            activeCharPool.value = [...activeCharPool.value, nextChar];
-        }
-    }
-
-    function showStudyTeachFirst(current: KanaChar) {
-        studyPhase.value = 'first';
-        studyTeachingPrefix.value = 'Aprenda:';
-        studyTeachingValue.value = current.romaji;
-        studyTeachingTone.value = 'primary';
-        studyOptions.value = ['Entendi'];
-    }
-
-    function showStudyPractice(current: KanaChar) {
-        studyPhase.value = 'practice';
-        studyTeachingPrefix.value = 'Prática';
-        studyTeachingValue.value = '';
-        studyTeachingTone.value = 'primary';
-        studyOptions.value = buildStudyOptions(current);
-    }
-
-    function showStudyTeachAgain(current: KanaChar) {
-        studyPhase.value = 'relearn';
-        studyTeachingPrefix.value = 'Reaprendendo:';
-        studyTeachingValue.value = current.romaji;
-        studyTeachingTone.value = 'success';
-        studyOptions.value = buildStudyOptions(current);
     }
 
     function showStudyQuestion() {
@@ -605,23 +312,21 @@ export function useKanaQuiz() {
         if (!current) return;
 
         const stats = getStudyStats(current.char);
-        const progress = getStudyProgress();
+        const progress = getStudyProgress(selectedCharsSession.value, studyCharStats.value, repetitionsPerChar.value);
+        const nextQuestionState = createStudyQuestionState({
+            current,
+            stats,
+            options: stats.firstTime ? ['Entendi'] : buildStudyOptions(current),
+        });
 
         progressText.value = `${progress.completed} de ${progress.total}`;
         studyAnswered.value = false;
         studySelectedOption.value = null;
-
-        if (stats.firstTime) {
-            showStudyTeachFirst(current);
-            return;
-        }
-
-        if (stats.teach) {
-            showStudyTeachAgain(current);
-            return;
-        }
-
-        showStudyPractice(current);
+        studyPhase.value = nextQuestionState.phase;
+        studyTeachingPrefix.value = nextQuestionState.prefix;
+        studyTeachingValue.value = nextQuestionState.value;
+        studyTeachingTone.value = nextQuestionState.tone;
+        studyOptions.value = nextQuestionState.options;
     }
 
     function showNextQuestion() {
@@ -632,7 +337,7 @@ export function useKanaQuiz() {
                 refreshStudyQuizList();
             }
 
-            if (isStudyComplete()) {
+            if (isStudyComplete(selectedCharsSession.value, studyCharStats.value, repetitionsPerChar.value)) {
                 finishQuiz();
                 return;
             }
@@ -650,7 +355,7 @@ export function useKanaQuiz() {
             return;
         }
 
-        progressText.value = `Questão ${currentIndex.value + 1} de ${quizList.value.length}`;
+        progressText.value = `Quest\u00E3o ${currentIndex.value + 1} de ${quizList.value.length}`;
 
         if (activeQuizMode.value === 'normal') {
             normalAnswer.value = '';
@@ -674,43 +379,25 @@ export function useKanaQuiz() {
     }
 
     function startRoundWithCountdown() {
-        stopTimer();
-        stopPreStartCountdown();
         questionVisible.value = false;
         progressText.value = 'Prepare-se...';
-
-        let remainingSeconds = 3;
-        timerText.value = `⏳ ${remainingSeconds}s`;
-
-        preStartCountdownInterval = setInterval(() => {
-            remainingSeconds -= 1;
-
-            if (remainingSeconds <= 0) {
-                stopPreStartCountdown();
-                startTime.value = Date.now();
-                updateTimer();
-                timerInterval = setInterval(updateTimer, 1000);
-                showNextQuestion();
-                return;
-            }
-
-            timerText.value = `⏳ ${remainingSeconds}s`;
-        }, 1000);
+        beginRoundWithCountdown(showNextQuestion);
     }
 
     function finishQuiz() {
         stopTimer();
         stopPreStartCountdown();
         clearPendingTimeouts();
+        resetFeedback();
 
         showModal(
             'Quiz finalizado!',
             `
-        <div class="stat-line">Tempo: ${getElapsedTimeText()}</div>
+        <div class="stat-line">Tempo: ${getElapsedTimeText(startTime.value)}</div>
         <div class="stat-line">Acertos: ${hits.value}</div>
         <div class="stat-line">Erros: ${miss.value}</div>
         <div class="stat-line">XP ganho: ${sessionXpGained.value}</div>
-        <div class="stat-line">Nível: ${profile.value.level} (${profile.value.rank})</div>
+        <div class="stat-line">N\u00EDvel: ${profile.value.level} (${profile.value.rank})</div>
       `,
             [{ text: 'OK', type: 'primary', onClick: exitQuiz }],
         );
@@ -723,14 +410,14 @@ export function useKanaQuiz() {
     }
 
     function confirmExitQuiz() {
-        showModal('Sair do quiz?', 'Tem certeza que deseja sair? Seu progresso da sessão será perdido.', [
+        showModal('Sair do quiz?', 'Tem certeza que deseja sair? Seu progresso da sess\u00E3o ser\u00E1 perdido.', [
             { text: 'Cancelar', type: 'secondary' },
             { text: 'Sair', type: 'primary', onClick: exitQuiz },
         ]);
     }
 
     function confirmRestartQuiz() {
-        showModal('Reiniciar quiz?', 'Deseja reiniciar com as mesmas configurações atuais?', [
+        showModal('Reiniciar quiz?', 'Deseja reiniciar com as mesmas configura\u00E7\u00F5es atuais?', [
             { text: 'Cancelar', type: 'secondary' },
             { text: 'Reiniciar', type: 'primary', onClick: startQuiz },
         ]);
@@ -746,138 +433,36 @@ export function useKanaQuiz() {
             .filter((char): char is KanaChar => Boolean(char));
 
         if (selectedCharsSession.value.length === 0) {
-            showModal('Atenção', 'Selecione pelo menos um caractere para começar.', [{ text: 'OK', type: 'primary' }]);
-            return;
-        }
-
-        if (activeQuizMode.value === 'combo') {
-            for (let repetitionIndex = 0; repetitionIndex < repetitionsPerChar.value; repetitionIndex += 1) {
-                const shuffledChars = shuffle([...selectedCharsSession.value]);
-
-                for (let comboIndex = 0; comboIndex < shuffledChars.length; comboIndex += 3) {
-                    const combo = shuffledChars.slice(comboIndex, comboIndex + 3);
-                    if (combo.length === 3) {
-                        quizList.value.push(combo);
-                    }
-                }
-            }
-        } else if (activeQuizMode.value === 'study') {
-            const stats: Record<string, StudyCharStat> = {};
-
-            for (const char of selectedCharsSession.value) {
-                stats[char.char] = {
-                    correct: 0,
-                    incorrect: 0,
-                    firstTime: true,
-                    teach: false,
-                };
-            }
-
-            studyCharStats.value = stats;
-            studyOrder.value = shuffle([...selectedCharsSession.value]);
-            activeCharPool.value = studyOrder.value.slice(0, 4);
-            quizList.value = shuffle([...activeCharPool.value]);
-            blockTeachingPhase.value = true;
-        } else {
-            for (const char of selectedCharsSession.value) {
-                for (let repetitionIndex = 0; repetitionIndex < repetitionsPerChar.value; repetitionIndex += 1) {
-                    quizList.value.push(char);
-                }
-            }
-
-            quizList.value = shuffle(quizList.value);
-        }
-
-        if (quizList.value.length === 0) {
-            showModal('Atenção', 'Não há caracteres suficientes para criar combos. Selecione pelo menos 3.', [
+            showModal('Aten\u00E7\u00E3o', 'Selecione pelo menos um caractere para come\u00E7ar.', [
                 { text: 'OK', type: 'primary' },
             ]);
             return;
         }
 
+        if (activeQuizMode.value === 'combo') {
+            quizList.value = createComboQuizList(selectedCharsSession.value, repetitionsPerChar.value);
+        } else if (activeQuizMode.value === 'study') {
+            const studyModeData = createStudyModeData(selectedCharsSession.value);
+            studyCharStats.value = studyModeData.stats;
+            studyOrder.value = studyModeData.studyOrder;
+            activeCharPool.value = studyModeData.activeCharPool;
+            quizList.value = studyModeData.quizList;
+            blockTeachingPhase.value = true;
+        } else {
+            quizList.value = createStandardQuizList(selectedCharsSession.value, repetitionsPerChar.value);
+        }
+
+        if (quizList.value.length === 0) {
+            showModal(
+                'Aten\u00E7\u00E3o',
+                'N\u00E3o h\u00E1 caracteres suficientes para criar combos. Selecione pelo menos 3.',
+                [{ text: 'OK', type: 'primary' }],
+            );
+            return;
+        }
+
         quizStarted.value = true;
         startRoundWithCountdown();
-    }
-
-    function submitAnswer() {
-        const current = currentKana.value;
-        const input = normalAnswer.value.trim().toLowerCase();
-
-        if (!current || normalInputDisabled.value || !input) return;
-
-        ensureKanaStats(current.char);
-
-        if (input === current.romaji) {
-            hits.value += 1;
-            getKanaStats(current.char).hits += 1;
-            addXp(XP_REWARD.normal);
-            showFeedback(true);
-            persistStats();
-            currentIndex.value += 1;
-            scheduleTask(showNextQuestion, 300);
-            return;
-        }
-
-        miss.value += 1;
-        getKanaStats(current.char).miss += 1;
-        normalAnswer.value = current.romaji;
-        normalInputDisabled.value = true;
-        normalInputError.value = true;
-        showFeedback(false);
-        persistStats();
-        quizList.value.push(current);
-
-        scheduleTask(() => {
-            normalInputDisabled.value = false;
-            normalInputError.value = false;
-            currentIndex.value += 1;
-            showNextQuestion();
-        }, 2000);
-    }
-
-    function submitComboAnswer() {
-        const combo = currentCombo.value;
-        const input = comboAnswer.value.trim().toLowerCase();
-
-        if (!combo.length || comboInputDisabled.value || !input) return;
-
-        const correctAnswer = combo.map((char) => char.romaji).join('');
-
-        for (const char of combo) {
-            ensureKanaStats(char.char);
-        }
-
-        if (input === correctAnswer) {
-            hits.value += 1;
-            for (const char of combo) {
-                getKanaStats(char.char).hits += 1;
-            }
-            addXp(XP_REWARD.combo);
-            showFeedback(true);
-            persistStats();
-            currentIndex.value += 1;
-            scheduleTask(showNextQuestion, 300);
-            return;
-        }
-
-        miss.value += 1;
-        for (const char of combo) {
-            getKanaStats(char.char).miss += 1;
-        }
-
-        comboAnswer.value = correctAnswer;
-        comboInputDisabled.value = true;
-        comboInputError.value = true;
-        showFeedback(false);
-        persistStats();
-        quizList.value.push([...combo]);
-
-        scheduleTask(() => {
-            comboInputDisabled.value = false;
-            comboInputError.value = false;
-            currentIndex.value += 1;
-            showNextQuestion();
-        }, 2000);
     }
 
     function getReverseOptionState(option: KanaChar) {
@@ -887,112 +472,42 @@ export function useKanaQuiz() {
         return 'disabled';
     }
 
-    function checkReverseAnswer(option: KanaChar) {
-        const current = currentKana.value;
-        if (!current || reverseLocked.value) return;
-
-        reverseLocked.value = true;
-        reverseSelectedChar.value = option.char;
-        ensureKanaStats(current.char);
-
-        if (option.char === current.char) {
-            hits.value += 1;
-            getKanaStats(current.char).hits += 1;
-            addXp(XP_REWARD.reverse);
-            showFeedback(true);
-            persistStats();
-            currentIndex.value += 1;
-            scheduleTask(showNextQuestion, 800);
-            return;
-        }
-
-        miss.value += 1;
-        getKanaStats(current.char).miss += 1;
-        showFeedback(false);
-        persistStats();
-        quizList.value.push(current);
-
-        scheduleTask(() => {
-            currentIndex.value += 1;
-            showNextQuestion();
-        }, 2000);
-    }
-
-    function markFirstTimeAndContinue() {
-        const current = currentKana.value;
-        if (!current) return;
-
-        getStudyStats(current.char).firstTime = false;
-        showFeedback(true);
-        currentIndex.value += 1;
-        scheduleTask(showNextQuestion, 600);
-    }
-
-    function getStudyOptionState(option: string) {
-        if (studyPhase.value === 'first' || !studyAnswered.value) return '';
-        if (option === currentKana.value?.romaji) return 'correct';
-        if (option === studySelectedOption.value) return 'wrong';
-        return 'disabled';
-    }
-
-    function handleStudyOption(option: string) {
-        const current = currentKana.value;
-        if (!current || studyAnswered.value) return;
-
-        if (studyPhase.value === 'first') {
-            markFirstTimeAndContinue();
-            return;
-        }
-
-        const stats = getStudyStats(current.char);
-        studyAnswered.value = true;
-        studySelectedOption.value = option;
-        ensureKanaStats(current.char);
-
-        if (option === current.romaji) {
-            hits.value += 1;
-            getKanaStats(current.char).hits += 1;
-            addXp(XP_REWARD.study);
-            stats.correct += 1;
-            stats.incorrect = 0;
-            stats.teach = false;
-            showFeedback(true);
-            persistStats();
-
-            if (isStudyComplete()) {
-                scheduleTask(showNextQuestion, 800);
-                return;
-            }
-
-            if (stats.correct >= repetitionsPerChar.value) {
-                activeCharPool.value = activeCharPool.value.filter((char) => char.char !== current.char);
-                unlockNextStudyCharIfNeeded();
-            }
-
-            if (activeCharPool.value.length > 0) {
-                refreshStudyQuizList();
-            } else {
-                quizList.value = [];
-            }
-
-            scheduleTask(showNextQuestion, 800);
-            return;
-        }
-
-        miss.value += 1;
-        getKanaStats(current.char).miss += 1;
-        stats.incorrect += 1;
-        if (stats.incorrect >= 2) {
-            stats.teach = true;
-        }
-        showFeedback(false);
-        persistStats();
-
-        scheduleTask(() => {
-            refreshStudyQuizList();
-            showNextQuestion();
-        }, 1500);
-    }
+    const { checkReverseAnswer, getStudyOptionState, handleStudyOption, submitAnswer, submitComboAnswer } =
+        createKanaQuizAnswerHandlers({
+            addXp,
+            activeCharPool,
+            comboAnswer,
+            comboInputDisabled,
+            comboInputError,
+            currentCombo,
+            currentIndex,
+            currentKana,
+            ensureKanaStats,
+            getKanaStats,
+            getStudyStats,
+            hits,
+            isStudyComplete: () =>
+                isStudyComplete(selectedCharsSession.value, studyCharStats.value, repetitionsPerChar.value),
+            miss,
+            normalAnswer,
+            normalInputDisabled,
+            normalInputError,
+            persistStats,
+            quizList,
+            refreshStudyQuizList,
+            repetitionsPerChar,
+            reverseLocked,
+            reverseSelectedChar,
+            scheduleTask,
+            selectedCharsSession,
+            showFeedback,
+            showNextQuestion,
+            studyAnswered,
+            studyCharStats,
+            studyPhase,
+            studySelectedOption,
+            unlockNextStudyCharIfNeeded,
+        });
 
     return {
         activeQuizMode,
@@ -1034,7 +549,6 @@ export function useKanaQuiz() {
         reverseOptions,
         sections,
         selectedCharIds,
-        selectedIdSet,
         setSectionSelection,
         startQuiz,
         studyOptions,
