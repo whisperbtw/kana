@@ -19,8 +19,6 @@ export function shuffle<T>(items: T[]) {
 
 export function createDefaultStats(): PersistedStats {
     return {
-        hits: 0,
-        miss: 0,
         perKana: {},
     };
 }

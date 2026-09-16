@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
 import type { KanaChar } from '~/data/chars'
-import type { QuizMode, StudyPhase, TeachingTone } from '~/composables/useKanaQuiz'
+import type { AnswerState, QuizMode, StudyPhase, TeachingTone } from '~/composables/useKanaQuiz'
 
 const normalAnswer = defineModel<string>('normalAnswer', { required: true })
 const comboAnswer = defineModel<string>('comboAnswer', { required: true })
@@ -14,10 +14,8 @@ defineProps<{
   currentRomajiText: string
   normalAnswerRef: ((element: Element | ComponentPublicInstance | null) => void) | null
   comboAnswerRef: ((element: Element | ComponentPublicInstance | null) => void) | null
-  normalInputDisabled: boolean
-  comboInputDisabled: boolean
-  normalInputError: boolean
-  comboInputError: boolean
+  normalAnswerState: AnswerState
+  comboAnswerState: AnswerState
   reverseLocked: boolean
   reverseOptions: KanaChar[]
   studyOptions: string[]
@@ -46,11 +44,14 @@ const emit = defineEmits<{
       type="text"
       placeholder="Digite o romaji ou o caractere"
       autocomplete="off"
-      :disabled="normalInputDisabled"
-      :class="{ 'is-error': normalInputError }"
+      :disabled="normalAnswerState !== 'ready'"
+      :class="{
+        'is-correct': normalAnswerState === 'correct',
+        'is-error': normalAnswerState === 'wrong',
+      }"
       @keydown.enter.prevent="emit('submitNormal')"
     >
-    <button type="button" class="action-button" :disabled="normalInputDisabled" @click="emit('submitNormal')">
+    <button type="button" class="action-button" :disabled="normalAnswerState !== 'ready'" @click="emit('submitNormal')">
       Confirmar
     </button>
   </div>
@@ -82,11 +83,14 @@ const emit = defineEmits<{
       type="text"
       placeholder="Digite o romaji ou os caracteres"
       autocomplete="off"
-      :disabled="comboInputDisabled"
-      :class="{ 'is-error': comboInputError }"
+      :disabled="comboAnswerState !== 'ready'"
+      :class="{
+        'is-correct': comboAnswerState === 'correct',
+        'is-error': comboAnswerState === 'wrong',
+      }"
       @keydown.enter.prevent="emit('submitCombo')"
     >
-    <button type="button" class="action-button" :disabled="comboInputDisabled" @click="emit('submitCombo')">
+    <button type="button" class="action-button" :disabled="comboAnswerState !== 'ready'" @click="emit('submitCombo')">
       Confirmar
     </button>
   </div>
@@ -104,6 +108,10 @@ const emit = defineEmits<{
     </div>
 
     <div class="study-char">{{ currentCharText }}</div>
+
+    <p v-if="studyPhase === 'relearn'" class="study-relearn-note">
+      Memorize a resposta. O caractere voltará sem a dica depois de outras perguntas.
+    </p>
 
     <div class="study-options">
       <button
@@ -149,6 +157,11 @@ input[type='text']:focus {
 input.is-error {
   border-color: var(--error);
   background: rgba(239, 71, 111, 0.1);
+}
+
+input.is-correct {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--tile));
 }
 
 .action-button,
@@ -267,7 +280,6 @@ input.is-error {
   background: var(--success);
   color: #fff;
   border-color: var(--success);
-  animation: correctPulse 0.38s ease-out;
 }
 
 .char-option.wrong,
@@ -275,7 +287,6 @@ input.is-error {
   background: var(--error);
   color: #fff;
   border-color: var(--error);
-  animation: shake 0.38s ease-out;
 }
 
 .char-option.disabled,
@@ -312,6 +323,19 @@ input.is-error {
 
 .study-teaching-value.tone-success {
   color: var(--success);
+}
+
+.study-teaching-value.tone-error {
+  color: var(--error);
+}
+
+.study-relearn-note {
+  max-width: 430px;
+  margin: -8px auto 20px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .study-options {

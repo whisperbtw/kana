@@ -5,6 +5,18 @@ import {
 import type { PersistedStats, ThemeMode } from '../core/types';
 import { createDefaultStats } from '../shared/utils';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseKanaStats(value: unknown) {
+    if (!isRecord(value)) return null;
+
+    const hits = typeof value.hits === 'number' && Number.isFinite(value.hits) && value.hits >= 0 ? value.hits : 0;
+    const miss = typeof value.miss === 'number' && Number.isFinite(value.miss) && value.miss >= 0 ? value.miss : 0;
+    return { hits, miss };
+}
+
 export function loadStoredTheme(): ThemeMode | null {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     return savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : null;
@@ -22,13 +34,18 @@ export function loadStoredStats(): PersistedStats {
     }
 
     try {
-        const parsed = JSON.parse(rawStats) as PersistedStats;
+        const parsed: unknown = JSON.parse(rawStats);
+        if (!isRecord(parsed) || !isRecord(parsed.perKana)) {
+            return createDefaultStats();
+        }
 
-        return {
-            hits: parsed.hits || 0,
-            miss: parsed.miss || 0,
-            perKana: parsed.perKana || {},
-        };
+        const perKana: PersistedStats['perKana'] = {};
+        for (const [char, value] of Object.entries(parsed.perKana)) {
+            const stats = parseKanaStats(value);
+            if (stats) perKana[char] = stats;
+        }
+
+        return { perKana };
     } catch {
         return createDefaultStats();
     }

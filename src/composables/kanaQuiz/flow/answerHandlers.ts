@@ -1,252 +1,180 @@
 import type { ComputedRef, Ref } from 'vue';
 import type { KanaChar } from '~/data/chars';
-import type { StudyCharStat } from '../core/types';
+import type { AnswerState, KanaStats, QuizQuestion, StudyPhase } from '../core/types';
 
-type CommonContext = {
-    ensureKanaStats: (char: string) => void
-    getKanaStats: (char: string) => { hits: number; miss: number }
-    persistStats: () => void
-    scheduleTask: (callback: () => void, delayMs: number) => void
-    showFeedback: (isCorrect: boolean) => void
-    showNextQuestion: () => void
-}
-
-export function createKanaQuizAnswerHandlers(context: CommonContext & {
-    currentKana: ComputedRef<KanaChar | null>
-    currentCombo: ComputedRef<KanaChar[]>
-    normalAnswer: Ref<string>
-    normalInputDisabled: Ref<boolean>
-    normalInputError: Ref<boolean>
-    comboAnswer: Ref<string>
-    comboInputDisabled: Ref<boolean>
-    comboInputError: Ref<boolean>
+type ScoreContext = {
     hits: Ref<number>
     miss: Ref<number>
-    currentIndex: Ref<number>
-    quizList: Ref<(KanaChar | KanaChar[])[]>
-    reverseLocked: Ref<boolean>
-    reverseSelectedChar: Ref<string | null>
-    activeCharPool: Ref<KanaChar[]>
-    repetitionsPerChar: Ref<number>
-    selectedCharsSession: Ref<KanaChar[]>
-    studyCharStats: Ref<Record<string, StudyCharStat>>
-    studyAnswered: Ref<boolean>
-    studySelectedOption: Ref<string | null>
-    studyPhase: Ref<'first' | 'practice' | 'relearn'>
-    getStudyStats: (char: string) => StudyCharStat
-    isStudyComplete: () => boolean
-    refreshStudyQuizList: () => void
-    unlockNextStudyCharIfNeeded: () => void
-}) {
-    function normalizeAnswerInput(value: string) {
-        return value.trim().toLowerCase();
+    getKanaStats: (char: string) => KanaStats
+    getSessionKanaStats: (char: string) => KanaStats
+    persistStats: () => void
+    showFeedback: (isCorrect: boolean) => void
+};
+
+type NavigationContext = {
+    scheduleTask: (callback: () => void, delayMs: number) => void
+    showNextQuestion: () => void
+};
+
+function normalizeAnswer(value: string) {
+    return value.trim().toLowerCase();
+}
+
+function recordResult(context: ScoreContext, chars: KanaChar[], isCorrect: boolean) {
+    const counter = isCorrect ? 'hits' : 'miss';
+    context[counter].value += 1;
+
+    for (const char of chars) {
+        context.getKanaStats(char.char)[counter] += 1;
+        context.getSessionKanaStats(char.char)[counter] += 1;
     }
 
-    function submitAnswer() {
+    context.showFeedback(isCorrect);
+    context.persistStats();
+}
+
+export function createNormalAnswerHandler(context: ScoreContext & NavigationContext & {
+    currentKana: ComputedRef<KanaChar | null>
+    answer: Ref<string>
+    answerState: Ref<AnswerState>
+    currentIndex: Ref<number>
+    quizList: Ref<QuizQuestion[]>
+}) {
+    return function submitNormalAnswer() {
         const current = context.currentKana.value;
-        const input = normalizeAnswerInput(context.normalAnswer.value);
+        const input = normalizeAnswer(context.answer.value);
+        if (!current || context.answerState.value !== 'ready' || !input) return;
 
-        if (!current || context.normalInputDisabled.value || !input) return;
-
-        context.ensureKanaStats(current.char);
-
-        const acceptedAnswers = new Set([
-            normalizeAnswerInput(current.romaji),
-            normalizeAnswerInput(current.char),
-        ]);
-
+        const acceptedAnswers = new Set([normalizeAnswer(current.romaji), normalizeAnswer(current.char)]);
         if (acceptedAnswers.has(input)) {
-            context.hits.value += 1;
-            context.getKanaStats(current.char).hits += 1;
-            context.showFeedback(true);
-            context.persistStats();
-            context.currentIndex.value += 1;
-            context.scheduleTask(context.showNextQuestion, 300);
+            context.answerState.value = 'correct';
+            recordResult(context, [current], true);
+            context.scheduleTask(() => {
+                context.currentIndex.value += 1;
+                context.showNextQuestion();
+            }, 500);
             return;
         }
 
-        context.miss.value += 1;
-        context.getKanaStats(current.char).miss += 1;
-        context.normalAnswer.value = current.romaji;
-        context.normalInputDisabled.value = true;
-        context.normalInputError.value = true;
-        context.showFeedback(false);
-        context.persistStats();
-        context.quizList.value.push(current);
-
+        context.answerState.value = 'wrong';
+        context.answer.value = current.romaji;
+        recordResult(context, [current], false);
+        context.quizList.value.push({ mode: 'normal', char: current });
         context.scheduleTask(() => {
-            context.normalInputDisabled.value = false;
-            context.normalInputError.value = false;
             context.currentIndex.value += 1;
             context.showNextQuestion();
         }, 2000);
-    }
+    };
+}
 
-    function submitComboAnswer() {
+export function createComboAnswerHandler(context: ScoreContext & NavigationContext & {
+    currentCombo: ComputedRef<KanaChar[]>
+    answer: Ref<string>
+    answerState: Ref<AnswerState>
+    currentIndex: Ref<number>
+    quizList: Ref<QuizQuestion[]>
+}) {
+    return function submitComboAnswer() {
         const combo = context.currentCombo.value;
-        const input = normalizeAnswerInput(context.comboAnswer.value);
-
-        if (!combo.length || context.comboInputDisabled.value || !input) return;
+        const input = normalizeAnswer(context.answer.value);
+        if (combo.length !== 3 || context.answerState.value !== 'ready' || !input) return;
 
         const correctAnswer = combo.map((char) => char.romaji).join('');
         const correctKanaAnswer = combo.map((char) => char.char).join('');
+        const isCorrect = new Set([normalizeAnswer(correctAnswer), normalizeAnswer(correctKanaAnswer)]).has(input);
 
-        for (const char of combo) {
-            context.ensureKanaStats(char.char);
-        }
+        context.answerState.value = isCorrect ? 'correct' : 'wrong';
+        recordResult(context, combo, isCorrect);
 
-        const acceptedAnswers = new Set([
-            normalizeAnswerInput(correctAnswer),
-            normalizeAnswerInput(correctKanaAnswer),
-        ]);
-
-        if (acceptedAnswers.has(input)) {
-            context.hits.value += 1;
-
-            for (const char of combo) {
-                context.getKanaStats(char.char).hits += 1;
-            }
-
-            context.showFeedback(true);
-            context.persistStats();
-            context.currentIndex.value += 1;
-            context.scheduleTask(context.showNextQuestion, 300);
+        if (isCorrect) {
+            context.scheduleTask(() => {
+                context.currentIndex.value += 1;
+                context.showNextQuestion();
+            }, 500);
             return;
         }
 
-        context.miss.value += 1;
-
-        for (const char of combo) {
-            context.getKanaStats(char.char).miss += 1;
-        }
-
-        context.comboAnswer.value = correctAnswer;
-        context.comboInputDisabled.value = true;
-        context.comboInputError.value = true;
-        context.showFeedback(false);
-        context.persistStats();
-        context.quizList.value.push([...combo]);
-
-        context.scheduleTask(() => {
-            context.comboInputDisabled.value = false;
-            context.comboInputError.value = false;
-            context.currentIndex.value += 1;
-            context.showNextQuestion();
-        }, 2000);
-    }
-
-    function checkReverseAnswer(option: KanaChar) {
-        const current = context.currentKana.value;
-        if (!current || context.reverseLocked.value) return;
-
-        context.reverseLocked.value = true;
-        context.reverseSelectedChar.value = option.char;
-        context.ensureKanaStats(current.char);
-
-        if (option.char === current.char) {
-            context.hits.value += 1;
-            context.getKanaStats(current.char).hits += 1;
-            context.showFeedback(true);
-            context.persistStats();
-            context.currentIndex.value += 1;
-            context.scheduleTask(context.showNextQuestion, 800);
-            return;
-        }
-
-        context.miss.value += 1;
-        context.getKanaStats(current.char).miss += 1;
-        context.showFeedback(false);
-        context.persistStats();
-        context.quizList.value.push(current);
-
+        context.answer.value = correctAnswer;
+        context.quizList.value.push({ mode: 'combo', chars: [combo[0]!, combo[1]!, combo[2]!] });
         context.scheduleTask(() => {
             context.currentIndex.value += 1;
             context.showNextQuestion();
         }, 2000);
-    }
+    };
+}
 
-    function markFirstTimeAndContinue() {
+export function createReverseAnswerHandler(context: ScoreContext & NavigationContext & {
+    currentKana: ComputedRef<KanaChar | null>
+    currentIndex: Ref<number>
+    quizList: Ref<QuizQuestion[]>
+    locked: Ref<boolean>
+    selectedChar: Ref<string | null>
+}) {
+    return function checkReverseAnswer(option: KanaChar) {
         const current = context.currentKana.value;
-        if (!current) return;
+        if (!current || context.locked.value) return;
 
-        context.getStudyStats(current.char).firstTime = false;
+        context.locked.value = true;
+        context.selectedChar.value = option.char;
+        const isCorrect = option.char === current.char;
+        recordResult(context, [current], isCorrect);
+
+        if (isCorrect) {
+            context.scheduleTask(() => {
+                context.currentIndex.value += 1;
+                context.showNextQuestion();
+            }, 800);
+            return;
+        }
+
+        context.quizList.value.push({ mode: 'reverse', char: current });
+        context.scheduleTask(() => {
+            context.currentIndex.value += 1;
+            context.showNextQuestion();
+        }, 2000);
+    };
+}
+
+export function createStudyAnswerHandlers(context: ScoreContext & NavigationContext & {
+    currentKana: ComputedRef<KanaChar | null>
+    answered: Ref<boolean>
+    selectedOption: Ref<string | null>
+    phase: Ref<StudyPhase>
+    acknowledgeCard: (char: string) => void
+    answerCard: (char: string, selectedRomaji: string, isCorrect: boolean) => void
+}) {
+    function continueAfterTeaching() {
+        const current = context.currentKana.value;
+        if (!current || context.answered.value) return;
+
+        context.answered.value = true;
+        context.acknowledgeCard(current.char);
         context.showFeedback(true);
-        context.currentIndex.value += 1;
         context.scheduleTask(context.showNextQuestion, 600);
     }
 
-    function getStudyOptionState(option: string) {
-        if (context.studyPhase.value === 'first' || !context.studyAnswered.value) return '';
+    function getOptionState(option: string) {
+        if (context.phase.value === 'first' || !context.answered.value) return '';
         if (option === context.currentKana.value?.romaji) return 'correct';
-        if (option === context.studySelectedOption.value) return 'wrong';
+        if (option === context.selectedOption.value) return 'wrong';
         return 'disabled';
     }
 
-    function handleStudyOption(option: string) {
+    function selectOption(option: string) {
         const current = context.currentKana.value;
-        if (!current || context.studyAnswered.value) return;
-
-        if (context.studyPhase.value === 'first') {
-            markFirstTimeAndContinue();
+        if (!current || context.answered.value) return;
+        if (context.phase.value === 'first') {
+            continueAfterTeaching();
             return;
         }
 
-        const stats = context.getStudyStats(current.char);
-        context.studyAnswered.value = true;
-        context.studySelectedOption.value = option;
-        context.ensureKanaStats(current.char);
-
-        if (option === current.romaji) {
-            context.hits.value += 1;
-            context.getKanaStats(current.char).hits += 1;
-            stats.correct += 1;
-            stats.incorrect = 0;
-            stats.teach = false;
-            context.showFeedback(true);
-            context.persistStats();
-
-            if (context.isStudyComplete()) {
-                context.scheduleTask(context.showNextQuestion, 800);
-                return;
-            }
-
-            if (stats.correct >= context.repetitionsPerChar.value) {
-                context.activeCharPool.value = context.activeCharPool.value.filter((char) => char.char !== current.char);
-                context.unlockNextStudyCharIfNeeded();
-            }
-
-            if (context.activeCharPool.value.length > 0) {
-                context.refreshStudyQuizList();
-            } else {
-                context.quizList.value = [];
-            }
-
-            context.scheduleTask(context.showNextQuestion, 800);
-            return;
-        }
-
-        context.miss.value += 1;
-        context.getKanaStats(current.char).miss += 1;
-        stats.incorrect += 1;
-
-        if (stats.incorrect >= 2) {
-            stats.teach = true;
-        }
-
-        context.showFeedback(false);
-        context.persistStats();
-
-        context.scheduleTask(() => {
-            context.refreshStudyQuizList();
-            context.showNextQuestion();
-        }, 1500);
+        context.answered.value = true;
+        context.selectedOption.value = option;
+        const isCorrect = option === current.romaji;
+        recordResult(context, [current], isCorrect);
+        context.answerCard(current.char, option, isCorrect);
+        context.scheduleTask(context.showNextQuestion, isCorrect ? 800 : 1500);
     }
 
-    return {
-        checkReverseAnswer,
-        getStudyOptionState,
-        handleStudyOption,
-        submitAnswer,
-        submitComboAnswer,
-    };
+    return { getOptionState, selectOption };
 }

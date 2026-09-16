@@ -1,22 +1,18 @@
-import { ref } from 'vue';
-import type { ModalButton } from '../core/types';
+import { ref, shallowRef } from 'vue';
+import type { FeedbackKind, ModalButton, ModalState } from '../core/types';
 import { getTimerText } from './timer';
 
 export function useKanaQuizRuntime() {
     const timerText = ref('\u23F1\uFE0F 00:00');
     const startTime = ref<number | null>(null);
 
-    const feedbackVisible = ref(false);
-    const feedbackIcon = ref('');
-
-    const modalOpen = ref(false);
-    const modalTitle = ref('');
-    const modalContent = ref('');
-    const modalButtons = ref<ModalButton[]>([]);
+    const feedback = ref<FeedbackKind | null>(null);
+    const modal = shallowRef<ModalState | null>(null);
 
     let timerInterval: ReturnType<typeof setInterval> | null = null;
     let preStartCountdownInterval: ReturnType<typeof setInterval> | null = null;
     const pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
+    let feedbackSequence = 0;
 
     function updateTimer() {
         timerText.value = getTimerText(startTime.value);
@@ -52,34 +48,29 @@ export function useKanaQuizRuntime() {
     }
 
     function resetFeedback() {
-        feedbackVisible.value = false;
-        feedbackIcon.value = '';
+        feedbackSequence += 1;
+        feedback.value = null;
     }
 
-    function showModal(title: string, content: string, buttons: ModalButton[]) {
-        modalTitle.value = title;
-        modalContent.value = content;
-        modalButtons.value = buttons;
-        modalOpen.value = true;
+    function showModal(state: ModalState) {
+        modal.value = state;
     }
 
     function handleModalAction(button: ModalButton) {
-        modalOpen.value = false;
-        modalTitle.value = '';
-        modalContent.value = '';
-        modalButtons.value = [];
+        modal.value = null;
+        button.onClick?.();
+    }
 
-        if (button.text !== 'dismiss') {
-            button.onClick?.();
-        }
+    function dismissModal() {
+        if (modal.value?.dismissible) modal.value = null;
     }
 
     function showFeedback(isCorrect: boolean) {
-        feedbackIcon.value = isCorrect ? '\u2705' : '\u274C';
-        feedbackVisible.value = true;
+        const sequence = ++feedbackSequence;
+        feedback.value = isCorrect ? 'correct' : 'wrong';
 
         scheduleTask(() => {
-            feedbackVisible.value = false;
+            if (sequence === feedbackSequence) feedback.value = null;
         }, 500);
     }
 
@@ -111,6 +102,7 @@ export function useKanaQuizRuntime() {
         stopPreStartCountdown();
         clearPendingTimeouts();
         resetFeedback();
+        modal.value = null;
         startTime.value = null;
         timerText.value = '\u23F1\uFE0F 00:00';
     }
@@ -124,13 +116,10 @@ export function useKanaQuizRuntime() {
     return {
         cleanupRuntime,
         clearPendingTimeouts,
-        feedbackIcon,
-        feedbackVisible,
+        dismissModal,
+        feedback,
         handleModalAction,
-        modalButtons,
-        modalContent,
-        modalOpen,
-        modalTitle,
+        modal,
         resetFeedback,
         resetRuntimeState,
         scheduleTask,

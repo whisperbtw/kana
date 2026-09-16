@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import type { KanaMode, QuizMode, QuizSection } from '~/composables/useKanaQuiz';
 
 const mode = defineModel<KanaMode>('mode', { required: true });
@@ -9,8 +9,11 @@ const selectedCharIds = defineModel<number[]>('selectedCharIds', { required: tru
 
 const props = defineProps<{
     sections: QuizSection[];
-    setSectionSelection: (indices: number[], checked: boolean) => void;
-    startQuiz: () => void;
+}>();
+
+const emit = defineEmits<{
+    setSectionSelection: [indices: number[], checked: boolean];
+    startQuiz: [];
 }>();
 
 const currentStep = ref(1);
@@ -109,7 +112,7 @@ function canProceed(step: number) {
                                     type="button"
                                     class="sec-btn"
                                     @click="
-                                        setSectionSelection(
+                                        emit('setSectionSelection',
                                             section.chars.map((c) => c.index),
                                             true,
                                         )
@@ -121,7 +124,7 @@ function canProceed(step: number) {
                                     type="button"
                                     class="sec-btn"
                                     @click="
-                                        setSectionSelection(
+                                        emit('setSectionSelection',
                                             section.chars.map((c) => c.index),
                                             false,
                                         )
@@ -166,7 +169,7 @@ function canProceed(step: number) {
                     </div>
                 </header>
 
-                <div class="config-block">
+                <div v-if="quizType !== 'study'" class="config-block">
                     <label class="config-label" for="repeat">Repetições por caractere</label>
                     <div class="repeat-row">
                         <button
@@ -189,6 +192,14 @@ function canProceed(step: number) {
                     </div>
                 </div>
 
+                <div v-else class="config-block adaptive-info">
+                    <span class="config-label">Estudo adaptativo</span>
+                    <p class="adaptive-description">
+                        Novos caracteres aparecem aos poucos. Acertos espaçam as revisões; erros fazem o caractere
+                        voltar mais cedo com uma dica.
+                    </p>
+                </div>
+
                 <div class="config-block">
                     <label class="config-label">Tipo de quiz</label>
                     <div class="quiz-type-grid">
@@ -208,7 +219,7 @@ function canProceed(step: number) {
 
                 <div class="step-nav">
                     <button type="button" class="btn-back" @click="goStep(2)">← Voltar</button>
-                    <button type="button" class="btn-start" @click="startQuiz">Começar quiz</button>
+                    <button type="button" class="btn-start" @click="emit('startQuiz')">Começar quiz</button>
                 </div>
             </div>
         </transition>
@@ -465,6 +476,20 @@ function canProceed(step: number) {
     text-transform: uppercase;
     color: var(--muted);
     margin-bottom: 10px;
+}
+
+.adaptive-info {
+    padding: 14px 16px;
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--primary) 7%, var(--tile));
+}
+
+.adaptive-description {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.55;
 }
 
 /* Repeat stepper */

@@ -6,15 +6,27 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "build:gh": "nuxt build --preset github_pages",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "lint": "eslint .",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "nuxt": "^4.4.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.5.2",
     "@vue/language-core": "^3.1.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-vue": "^10.11.0",
+    "globals": "^17.12.0",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.1",
     "vue-tsc": "^3.1.1"
   }
 }

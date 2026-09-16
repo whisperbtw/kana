@@ -31,6 +31,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run quality checks
+        run: npm run check
+
+      - name: Install browser for UI tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run responsive UI tests
+        run: npm run test:e2e
+
       - name: Build static site
         env:
           NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/

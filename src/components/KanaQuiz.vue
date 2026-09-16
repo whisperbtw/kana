@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useHead } from '#imports';
+import { useKanaQuiz } from '~/composables/useKanaQuiz';
+
 useHead({
     title: 'Kana Quiz',
 });
@@ -7,30 +10,25 @@ const {
     activeQuizMode,
     checkReverseAnswer,
     comboAnswer,
+    comboAnswerState,
     comboAnswerRef,
-    comboInputDisabled,
-    comboInputError,
     confirmExitQuiz,
     confirmRestartQuiz,
     currentCharText,
     currentCombo,
     currentRomajiText,
-    feedbackIcon,
-    feedbackVisible,
+    dismissModal,
+    feedback,
     getReverseOptionState,
     getStudyOptionState,
     handleModalAction,
     handleStudyOption,
     isDark,
-    modalButtons,
-    modalContent,
-    modalOpen,
-    modalTitle,
+    modal,
     mode,
     normalAnswer,
+    normalAnswerState,
     normalAnswerRef,
-    normalInputDisabled,
-    normalInputError,
     progressText,
     questionVisible,
     quizStarted,
@@ -69,7 +67,8 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
             <p class="subtitle">Treine hiragana e katakana com foco em velocidade e memória.</p>
         </header>
 
-        <button type="button" class="theme-toggle floating-icon-button" aria-label="Alternar tema" @click="toggleTheme">
+        <div class="quiz-actions">
+        <button type="button" class="theme-toggle quiz-action-button" aria-label="Alternar tema" @click="toggleTheme">
             <svg
                 v-if="!isDark"
                 xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +99,7 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
         <button
             v-if="quizStarted"
             type="button"
-            class="exit-btn floating-icon-button"
+            class="exit-btn quiz-action-button"
             aria-label="Sair do quiz"
             @click="confirmExitQuiz"
         >
@@ -114,7 +113,7 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
         <button
             v-if="quizStarted"
             type="button"
-            class="restart-btn floating-icon-button"
+            class="restart-btn quiz-action-button"
             aria-label="Reiniciar quiz"
             @click="confirmRestartQuiz"
         >
@@ -124,6 +123,7 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
                 />
             </svg>
         </button>
+        </div>
 
         <main class="app-main">
             <QuizSetupPanel
@@ -133,12 +133,24 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
                 v-model:repeat="repeat"
                 v-model:selected-char-ids="selectedCharIds"
                 :sections="sections"
-                :set-section-selection="setSectionSelection"
-                :start-quiz="startQuiz"
+                @set-section-selection="setSectionSelection"
+                @start-quiz="startQuiz"
             />
 
             <section v-else class="quiz">
                 <QuizStatusBar :progress-text="progressText" :timer-text="timerText" />
+
+                <div class="feedback-slot" role="status" aria-live="polite">
+                    <div v-if="feedback" class="answer-feedback" :class="feedback">
+                        <svg v-if="feedback === 'correct'" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m5 12 4 4L19 6" />
+                        </svg>
+                        <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M7 7l10 10M17 7 7 17" />
+                        </svg>
+                        <span>{{ feedback === 'correct' ? 'Resposta correta' : 'Resposta incorreta' }}</span>
+                    </div>
+                </div>
 
                 <QuizQuestionPanel
                     v-model:normal-answer="normalAnswer"
@@ -150,10 +162,8 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
                     :current-romaji-text="currentRomajiText"
                     :normal-answer-ref="setNormalAnswerRef"
                     :combo-answer-ref="setComboAnswerRef"
-                    :normal-input-disabled="normalInputDisabled"
-                    :combo-input-disabled="comboInputDisabled"
-                    :normal-input-error="normalInputError"
-                    :combo-input-error="comboInputError"
+                    :normal-answer-state="normalAnswerState"
+                    :combo-answer-state="comboAnswerState"
                     :reverse-locked="reverseLocked"
                     :reverse-options="reverseOptions"
                     :study-options="studyOptions"
@@ -172,14 +182,10 @@ function setComboAnswerRef(element: Element | { $el?: Element } | null) {
         </main>
     </div>
 
-    <div class="feedback" :class="{ show: feedbackVisible }">{{ feedbackIcon }}</div>
-
     <QuizModal
-        :open="modalOpen"
-        :title="modalTitle"
-        :content="modalContent"
-        :buttons="modalButtons"
+        :modal="modal"
         @action="handleModalAction"
+        @close="dismissModal"
     />
 </template>
 
@@ -227,9 +233,16 @@ h1 {
     line-height: 1.55;
 }
 
-.floating-icon-button {
+.quiz-actions {
     position: fixed;
     top: 18px;
+    right: 18px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+}
+
+.quiz-action-button {
     width: 48px;
     height: 48px;
     padding: 11px;
@@ -248,33 +261,20 @@ h1 {
     align-items: center;
     justify-content: center;
     box-shadow: 0 10px 24px var(--shadow);
-    z-index: 100;
 }
 
-.floating-icon-button svg {
+.quiz-action-button svg {
     width: 23px;
     height: 23px;
 }
 
-.theme-toggle {
-    right: 18px;
-}
-
-.exit-btn {
-    right: 74px;
-}
-
-.restart-btn {
-    right: 130px;
-}
-
-.floating-icon-button:hover {
+.quiz-action-button:hover {
     transform: translateY(-3px);
     border-color: color-mix(in srgb, var(--primary) 56%, var(--border));
     box-shadow: 0 14px 30px var(--shadow);
 }
 
-.floating-icon-button:active {
+.quiz-action-button:active {
     transform: translateY(0);
 }
 
@@ -311,24 +311,52 @@ h1 {
     opacity: 0.6;
 }
 
-.feedback {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    font-size: 4.4rem;
-    transition: transform 0.28s ease;
-    pointer-events: none;
-    z-index: 1000;
+.feedback-slot {
+    min-height: 42px;
+    display: flex;
+    justify-content: center;
+    margin: -6px 0 4px;
 }
 
-.feedback.show {
-    transform: translate(-50%, -50%) scale(1);
+.answer-feedback {
+    min-width: 190px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid currentColor;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.answer-feedback svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.answer-feedback.correct {
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 11%, transparent);
+}
+
+.answer-feedback.wrong {
+    color: var(--error);
+    background: color-mix(in srgb, var(--error) 11%, transparent);
 }
 
 @media (max-width: 760px) {
-    .floating-icon-button {
-        top: 12px;
+    .quiz-actions {
+        position: static;
+        justify-content: flex-end;
+        margin-bottom: 12px;
     }
 
     .container {
@@ -348,22 +376,10 @@ h1 {
 }
 
 @media (max-width: 430px) {
-    .floating-icon-button {
+    .quiz-action-button {
         width: 44px;
         height: 44px;
         padding: 10px;
-    }
-
-    .theme-toggle {
-        right: 12px;
-    }
-
-    .exit-btn {
-        right: 62px;
-    }
-
-    .restart-btn {
-        right: 112px;
     }
 }
 </style>

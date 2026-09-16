@@ -109,32 +109,6 @@ button {
   }
 }
 
-@keyframes correctPulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  25% {
-    transform: translateX(-6px);
-  }
-
-  75% {
-    transform: translateX(6px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -146,9 +120,4 @@ button {
   }
 }
 
-@media (max-width: 760px) {
-  body {
-    padding-top: 76px;
-  }
-}
 </style>
